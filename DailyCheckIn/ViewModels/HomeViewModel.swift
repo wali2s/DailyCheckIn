@@ -57,7 +57,7 @@ final class HomeViewModel: ObservableObject {
                     mood: .good,
                     energyLevel: 4,
                     stressLevel: 2,
-                    notes: "Had a calm and productive day.",
+                    note: "Had a calm and productive day.",
                     tags: ["Calm", "Productive"]
                 )
                 

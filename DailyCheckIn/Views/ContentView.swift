@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     
     @StateObject private var viewModel = HomeViewModel()
+    @State private var selectedSpace: JournalSpace?
     
     var body: some View {
        NavigationStack {
@@ -18,12 +19,23 @@ struct ContentView: View {
                     headerSection
                     
                     ForEach(JournalSpace.allCases) { space in
-                        SpaceCheckInCard(space: space, checkIn: viewModel.checkIn(for: space))
+                        SpaceCheckInCard(
+                            space: space,
+                            checkIn: viewModel.checkIn(for: space),
+                            onCheckIn: {
+                                selectedSpace = space
+                            }
+                        )
                     }
                 }
                 .padding()
            }
             .navigationTitle("Daily Check-In")
+            .sheet(item: $selectedSpace) { space in
+                CheckInView(space: space) { newCheckIn in
+                    viewModel.addCheckIn(newCheckIn)
+                }
+            }
         }
     }
     
@@ -44,6 +56,7 @@ struct ContentView: View {
     private struct SpaceCheckInCard: View {
         let space: JournalSpace
         let checkIn: CheckIn?
+        var onCheckIn: () -> Void
         
         var body: some View {
             VStack(alignment: .leading, spacing: 16) {
@@ -73,7 +86,7 @@ struct ContentView: View {
                             Text(checkIn.mood.title)
                                 .font(.headline)
                             
-                            Text(checkIn.notes)
+                            Text(checkIn.note)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
@@ -94,6 +107,11 @@ struct ContentView: View {
                     Text("Take a moment to reflect on your day.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    
+                    Button("Create Check-In") {
+                        onCheckIn()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
             }
             .padding()

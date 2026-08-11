@@ -14,7 +14,7 @@ struct CheckIn: Identifiable, Codable, Hashable {
     var mood: Mood
     var energyLevel: Int
     var stressLevel: Int
-    var notes: String
+    var note: String
     var tags: [String]
     
     init(
@@ -24,7 +24,7 @@ struct CheckIn: Identifiable, Codable, Hashable {
         mood: Mood,
         energyLevel: Int = 3,
         stressLevel: Int = 3,
-        notes:String = "",
+        note:String = "",
         tags: [String] = []
     ) {
         self.id = id
@@ -33,7 +33,7 @@ struct CheckIn: Identifiable, Codable, Hashable {
         self.mood = mood
         self.energyLevel = energyLevel
         self.stressLevel = stressLevel
-        self.notes = notes
+        self.note = note
         self.tags = tags
     }
 }
