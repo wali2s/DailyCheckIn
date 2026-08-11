@@ -42,6 +42,16 @@ struct ContentView: View {
                 .padding()
            }
             .navigationTitle("Daily Check-In")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        HistoryView(viewModel: viewModel)
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    .accessibilityLabel("Open history")
+                }
+            }
             .sheet(item: $selectedSpace) { space in
                 CheckInView(
                     space: space,
@@ -50,6 +60,7 @@ struct ContentView: View {
                     viewModel.addCheckIn(newCheckIn)
                 }
             }
+            
         }
     }
     
@@ -142,7 +153,7 @@ struct ContentView: View {
     }
 }
 
-private final class PreviewCheckInStorageService: CheckInStorageService {
+final class PreviewCheckInStorageService: CheckInStorageService {
     
     private var previewCheckIns: [CheckIn] = [
         CheckIn(
