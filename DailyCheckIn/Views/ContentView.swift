@@ -9,154 +9,70 @@ import SwiftUI
 
 struct ContentView: View {
     
+    @StateObject private var viewModel: HomeViewModel
+    @State private var selectedTab = 0
     
-        @StateObject private var viewModel: HomeViewModel
-        @State private var selectedSpace: JournalSpace?
-        
-        init(
-            storageService: CheckInStorageService = UserDefaultsCheckInStorageService()
-        ) {
-            _viewModel = StateObject(
-                wrappedValue: HomeViewModel(
-                    storageService: storageService
-                )
+    init(
+        storageService: CheckInStorageService = UserDefaultsCheckInStorageService()
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: HomeViewModel(
+                storageService: storageService
             )
-        }
+        )
+    }
     
     var body: some View {
-       NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    headerSection
-                    
-                    ForEach(JournalSpace.allCases) { space in
-                        SpaceCheckInCard(
-                            space: space,
-                            checkIn: viewModel.checkIn(for: space),
-                            onCheckIn: {
-                                selectedSpace = space
-                            }
-                        )
-                    }
-                }
-                .padding()
-           }
-            .navigationTitle("Daily Check-In")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink {
-                        HistoryView(viewModel: viewModel)
-                    } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                    }
-                    .accessibilityLabel("Open history")
-                }
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                HomeView(viewModel: viewModel)
             }
-            .sheet(item: $selectedSpace) { space in
-                CheckInView(
-                    space: space,
-                    existingCheckIn: viewModel.checkIn(for: space)
-                ) { newCheckIn in
-                    viewModel.addCheckIn(newCheckIn)
-                }
+            .tabItem {
+                Label(
+                    "Home",
+                    systemImage: "house.fill"
+                )
             }
+            .tag(0)
             
+            NavigationStack {
+                HistoryView(viewModel: viewModel)
+            }
+            .tabItem {
+                Label(
+                    "History",
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
+            .tag(1)
+            
+            NavigationStack {
+                StatisticsView(
+                    homeViewModel: viewModel
+                )
+            }
+            .tabItem {
+                Label(
+                    "Statistics",
+                    systemImage: "chart.bar.fill"
+                )
+            }
+            .tag(2)
         }
     }
-    
-    private var headerSection: some View {
-        VStack (alignment: .leading, spacing: 8) {
-            Text("Today")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            Text(Date.now, style: .date)
-                .foregroundStyle(.secondary)
-            
-            Text("Take a moment to check in with yourself.")
-                .foregroundStyle(.secondary)
-        }
-    }
-    
-    private struct SpaceCheckInCard: View {
-        let space: JournalSpace
-        let checkIn: CheckIn?
-        var onCheckIn: () -> Void
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Image(systemName: space.iconName)
-                        .font(.title2)
-                        .foregroundStyle(.blue)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(space.title)
-                            .font(.headline)
-                        
-                        Text(space.subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    
-                }
-                Divider()
-                
-                if let checkIn {
-                    HStack {
-                        Text(checkIn.mood.emoji)
-                            .font(.largeTitle)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(checkIn.mood.title)
-                                .font(.headline)
-                            
-                            Text(checkIn.note)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                        Spacer()
-                    }
-                    HStack {
-                        Label("Energy \(checkIn.energyLevel)/ 5", systemImage: "bolt.fill")
-                        Spacer()
-                        Label("Stress \(checkIn.stressLevel)/ 5", systemImage: "waveform.path.ecg")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    
-                    Button("Edit Check-In") {
-                        onCheckIn()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("createCheckInButton.\(space.rawValue)")
-                } else {
-                    Text("No check-in yet")
-                        .foregroundStyle(.secondary)
-                    
-                    Text("Take a moment to reflect on your day.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    
-                    Button("Create Check-In") {
-                        onCheckIn()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("createCheckInButton.\(space.rawValue)")
-                }
-            }
-            .padding()
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-        }
-    }
+}
+
+#Preview("App - Sample Data") {
+    ContentView(
+        storageService: PreviewCheckInStorageService()
+    )
 }
 
 final class PreviewCheckInStorageService: CheckInStorageService {
     
     private var previewCheckIns: [CheckIn] = [
         CheckIn(
+            date: Date(),
             space: .personal,
             mood: .good,
             energyLevel: 4,
@@ -165,12 +81,22 @@ final class PreviewCheckInStorageService: CheckInStorageService {
             tags: ["Calm", "Productive"]
         ),
         CheckIn(
+            date: Date(),
             space: .professional,
             mood: .neutral,
             energyLevel: 3,
             stressLevel: 4,
             note: "Worked on the Daily Check-In app.",
             tags: ["Development"]
+        ),
+        CheckIn(
+            date: Date().addingTimeInterval(-86_400),
+            space: .personal,
+            mood: .veryGood,
+            energyLevel: 5,
+            stressLevel: 1,
+            note: "Spent time with my family.",
+            tags: ["Family"]
         )
     ]
     
@@ -181,10 +107,4 @@ final class PreviewCheckInStorageService: CheckInStorageService {
     func saveCheckIns(_ checkIns: [CheckIn]) {
         previewCheckIns = checkIns
     }
-}
-
-#Preview("Home Screen") {
-    ContentView(
-        storageService: PreviewCheckInStorageService()
-    )
 }
