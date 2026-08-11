@@ -30,6 +30,37 @@ final class HomeViewModel: ObservableObject {
         }
     }
     
+    var currentStreak: Int {
+        let checkInDays = Set(
+            checkIns.map { checkIn in
+                calendar.startOfDay(
+                    for: checkIn.date
+                )
+            }
+        )
+        
+        var streak = 0
+        var currentDate = calendar.startOfDay(
+            for: Date()
+        )
+        
+        while checkInDays.contains(currentDate) {
+            streak += 1
+            
+            guard let previousDate = calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: currentDate
+            ) else {
+                break
+            }
+            
+            currentDate = previousDate
+        }
+        
+        return streak
+    }
+    
     var personalCheckInToday: CheckIn? {
         todayCheckIns.first { checkin in
             checkin.space == .personal}

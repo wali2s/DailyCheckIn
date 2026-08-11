@@ -17,7 +17,9 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 headerSection
-                
+                StreakCard(
+                       streak: viewModel.currentStreak
+                   )
                 ForEach(JournalSpace.allCases) { space in
                     SpaceCheckInCard(
                         space: space,
@@ -65,6 +67,57 @@ struct HomeView: View {
             )
             .foregroundStyle(.secondary)
         }
+    }
+    
+}
+
+private struct StreakCard: View {
+    
+    let streak: Int
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "flame.fill")
+                .font(.largeTitle)
+                .foregroundStyle(.orange)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Current Streak")
+                    .font(.headline)
+                
+                if streak == 0 {
+                    Text("Start your streak today")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else if streak == 1 {
+                    Text("1 day")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                } else {
+                    Text("\(streak) days")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .background(
+            LinearGradient(
+                colors: [
+                    .orange.opacity(0.2),
+                    .yellow.opacity(0.15)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 20
+            )
+        )
     }
 }
 
@@ -185,6 +238,8 @@ private struct SpaceCheckInCard: View {
         }
     }
 }
+
+
 
 #Preview("Home - Sample Data") {
     NavigationStack {
