@@ -60,7 +60,9 @@ struct ContentView: View {
             .tag(2)
             
             NavigationStack {
-                SettingsView()
+                SettingsView(
+                    homeViewModel: viewModel
+                )
             }
             .tabItem {
                 Label(

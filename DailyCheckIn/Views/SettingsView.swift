@@ -9,7 +9,17 @@ import SwiftUI
 
 struct SettingsView: View {
     
+    @ObservedObject var homeViewModel: HomeViewModel
+    
     @StateObject private var viewModel = SettingsViewModel()
+    
+    private let exportService = CheckInExportService()
+    
+    private var exportJSON: String? {
+        try? exportService.makeJSON(
+            from: homeViewModel.checkIns
+        )
+    }
     
     var body: some View {
         Form {
@@ -85,6 +95,29 @@ struct SettingsView: View {
                 }
             }
             
+            Section("Data") {
+                if let exportJSON {
+                    ShareLink(
+                        item: exportJSON,
+                        subject: Text("Daily Check-Ins"),
+                        message: Text(
+                            "Export of your Daily Check-In entries."
+                        )
+                    ) {
+                        Label(
+                            "Export Check-Ins",
+                            systemImage: "square.and.arrow.up"
+                        )
+                    }
+                } else {
+                    Label(
+                        "Export unavailable",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .foregroundStyle(.secondary)
+                }
+            }
+            
             if !viewModel.statusMessage.isEmpty {
                 Section("Status") {
                     Text(viewModel.statusMessage)
@@ -97,8 +130,13 @@ struct SettingsView: View {
     }
 }
 
+
 #Preview("Settings") {
     NavigationStack {
-        SettingsView()
+        SettingsView(
+            homeViewModel: HomeViewModel(
+                storageService: PreviewCheckInStorageService()
+            )
+        )
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class CheckinViewModel: ObservableObject {
+final class CheckInViewModel: ObservableObject {
     
     let space: JournalSpace
     
@@ -17,20 +17,32 @@ final class CheckinViewModel: ObservableObject {
     @Published var stressLevel: Int
     @Published var note: String
     @Published var tagsText: String
-
     
-    init(space: JournalSpace, existingCheckin: CheckIn? = nil) {
+    private let checkInID: UUID
+    private let checkInDate: Date
+    
+    init(
+        space: JournalSpace,
+        existingCheckIn: CheckIn? = nil
+    ) {
         self.space = space
         
-        self.mood = existingCheckin?.mood ?? .neutral
-        self.energyLevel = existingCheckin?.energyLevel ?? 3
-        self.stressLevel = existingCheckin?.stressLevel ?? 3
-        self.note = existingCheckin?.note ?? ""
-        self.tagsText = existingCheckin?.tags.joined(separator: ", ") ?? ""
+        self.checkInID = existingCheckIn?.id ?? UUID()
+        self.checkInDate = existingCheckIn?.date ?? Date()
+        
+        self.mood = existingCheckIn?.mood ?? .neutral
+        self.energyLevel = existingCheckIn?.energyLevel ?? 3
+        self.stressLevel = existingCheckIn?.stressLevel ?? 3
+        self.note = existingCheckIn?.note ?? ""
+        self.tagsText = existingCheckIn?.tags.joined(
+            separator: ", "
+        ) ?? ""
     }
     
-    func makeCheckin() -> CheckIn {
+    func makeCheckIn() -> CheckIn {
         CheckIn(
+            id: checkInID,
+            date: checkInDate,
             space: space,
             mood: mood,
             energyLevel: energyLevel,
@@ -43,8 +55,13 @@ final class CheckinViewModel: ObservableObject {
     private var parsedTags: [String] {
         tagsText
             .split(separator: ",")
-            .map {$0.trimmingCharacters(in: .whitespacesAndNewlines)
+            .map {
+                $0.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
             }
-            .filter{!$0.isEmpty}
+            .filter {
+                !$0.isEmpty
+            }
     }
 }

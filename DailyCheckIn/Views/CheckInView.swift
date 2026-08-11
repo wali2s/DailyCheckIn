@@ -10,7 +10,7 @@ import SwiftUI
 struct CheckInView: View {
     
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel: CheckinViewModel
+    @StateObject private var viewModel: CheckInViewModel
     
     let isEditing: Bool
     let onSave: (CheckIn) -> Void
@@ -19,7 +19,7 @@ struct CheckInView: View {
          existingCheckIn: CheckIn? = nil,
          onSave: @escaping (CheckIn) -> Void
     ){
-        _viewModel = StateObject(wrappedValue: CheckinViewModel(space: space, existingCheckin: existingCheckIn))
+        _viewModel = StateObject(wrappedValue: CheckInViewModel(space: space, existingCheckIn: existingCheckIn))
         self.isEditing = existingCheckIn != nil
         self.onSave = onSave
     }
@@ -95,7 +95,7 @@ struct CheckInView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let checkIn = viewModel.makeCheckin()
+                        let checkIn = viewModel.makeCheckIn()
                         onSave(checkIn)
                         dismiss()
                     }
