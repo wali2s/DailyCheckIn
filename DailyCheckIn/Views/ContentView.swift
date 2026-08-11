@@ -58,6 +58,17 @@ struct ContentView: View {
                 )
             }
             .tag(2)
+            
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label(
+                    "Settings",
+                    systemImage: "gearshape.fill"
+                )
+            }
+            .tag(3)
         }
     }
 }
