@@ -14,6 +14,15 @@ final class HomeViewModel: ObservableObject {
     @Published var selectedSpace: JournalSpace = .personal
     
     private let calendar = Calendar.current
+    private let storageService: CheckInStorageService
+    
+    
+    
+    init(storageService: CheckInStorageService) {
+        self.storageService = storageService
+        self.checkIns = storageService.loadCheckIns()
+        
+    }
     
     var todayCheckIns: [CheckIn] {
         checkIns.filter { checkin in
@@ -31,18 +40,16 @@ final class HomeViewModel: ObservableObject {
             checkin.space == .professional}
     }
     
-    init() {
-        loadSampleData()
-    }
-    
     func addCheckIn(_ checkIn: CheckIn) {
         checkIns.append(checkIn)
+        saveCheckIns()
     }
     
     func deleteCheckIn(_ checkIn: CheckIn) {
         checkIns.removeAll { existingCheckIn in
             existingCheckIn.id == checkIn.id
         }
+        saveCheckIns()
     }
     
     func checkIn ( for space: JournalSpace) -> CheckIn? {
@@ -51,16 +58,8 @@ final class HomeViewModel: ObservableObject {
         }
     }
     
-    private func loadSampleData() {
-        let personalCheckIn = CheckIn(
-                    space: .personal,
-                    mood: .good,
-                    energyLevel: 4,
-                    stressLevel: 2,
-                    note: "Had a calm and productive day.",
-                    tags: ["Calm", "Productive"]
-                )
-                
-                checkIns = [personalCheckIn]
+    
+    private func saveCheckIns() {
+        storageService.saveCheckIns(checkIns)
     }
 }

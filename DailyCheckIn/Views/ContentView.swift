@@ -9,8 +9,19 @@ import SwiftUI
 
 struct ContentView: View {
     
-    @StateObject private var viewModel = HomeViewModel()
-    @State private var selectedSpace: JournalSpace?
+    
+        @StateObject private var viewModel: HomeViewModel
+        @State private var selectedSpace: JournalSpace?
+        
+        init(
+            storageService: CheckInStorageService = UserDefaultsCheckInStorageService()
+        ) {
+            _viewModel = StateObject(
+                wrappedValue: HomeViewModel(
+                    storageService: storageService
+                )
+            )
+        }
     
     var body: some View {
        NavigationStack {
@@ -112,7 +123,7 @@ struct ContentView: View {
                         onCheckIn()
                     }
                     .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("createCheckInButton. \(space.rawValue)")
+                    .accessibilityIdentifier("createCheckInButton.\(space.rawValue)")
                 }
             }
             .padding()
@@ -122,6 +133,38 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
+private final class PreviewCheckInStorageService: CheckInStorageService {
+    
+    private var previewCheckIns: [CheckIn] = [
+        CheckIn(
+            space: .personal,
+            mood: .good,
+            energyLevel: 4,
+            stressLevel: 2,
+            note: "Had a calm and productive day.",
+            tags: ["Calm", "Productive"]
+        ),
+        CheckIn(
+            space: .professional,
+            mood: .neutral,
+            energyLevel: 3,
+            stressLevel: 4,
+            note: "Worked on the Daily Check-In app.",
+            tags: ["Development"]
+        )
+    ]
+    
+    func loadCheckIns() -> [CheckIn] {
+        previewCheckIns
+    }
+    
+    func saveCheckIns(_ checkIns: [CheckIn]) {
+        previewCheckIns = checkIns
+    }
+}
+
+#Preview("Home Screen") {
+    ContentView(
+        storageService: PreviewCheckInStorageService()
+    )
 }

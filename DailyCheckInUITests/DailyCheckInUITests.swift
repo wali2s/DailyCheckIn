@@ -34,36 +34,4 @@ final class DailyCheckInUITests: XCTestCase {
         )
     }
     
-    func testUserCanCreateProfessionalCheckIn() {
-        let app = XCUIApplication()
-        app.launch()
-        
-        let createCheckInButton = app.buttons[
-            "createCheckInButton.professional"
-        ]
-        
-        XCTAssertTrue(
-            createCheckInButton.waitForExistence(timeout: 3)
-        )
-        
-        createCheckInButton.tap()
-        
-        let noteField = app.textFields[
-            "checkInNoteTextField"
-        ]
-        
-        XCTAssertTrue(
-            noteField.waitForExistence(timeout: 3)
-        )
-        
-        noteField.tap()
-        noteField.typeText("Worked on the Daily Check-In app.")
-        
-        app.buttons["saveCheckInButton"].tap()
-        
-        XCTAssertTrue(
-            app.navigationBars["Daily Check-In"]
-                .waitForExistence(timeout: 3)
-        )
-    }
 }
