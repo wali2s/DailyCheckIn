@@ -66,7 +66,13 @@ struct HistoryView: View {
              
              Section {
                  ForEach(filteredCheckIns) { checkIn in
-                     HistoryRow(checkIn: checkIn)
+                     NavigationLink {
+                         CheckInDetailView(checkIn: checkIn)
+                     } label: {
+                         
+                         
+                         HistoryRow(checkIn: checkIn)
+                     }
                  }
                  .onDelete(perform: deleteCheckIns)
              }
