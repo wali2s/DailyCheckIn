@@ -53,6 +53,17 @@ struct CheckInView: View {
                     )
                 }
                 
+                Section("Reflection Prompt") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Image(systemName: viewModel.space.iconName)
+                            .foregroundStyle(.blue)
+                        
+                        Text(viewModel.space.reflectionPrompt)
+                            .font(.headline)
+                    }
+                    .padding(.vertical, 4)
+                }
+                
                 Section("Your Thoughts") {
                     TextField(
                         "Write a short note ...",
@@ -61,8 +72,17 @@ struct CheckInView: View {
                     )
                     .lineLimit(4...8)
                     .accessibilityIdentifier("checkInNoteTextField")
-
                 }
+                
+                Section("Tags") {
+                    TextField(
+                        "Example: Focus, Learning, Exercise",
+                        text: $viewModel.tagsText
+                    )
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                }
+                
             }
             .navigationTitle(isEditing ? "Edit Check-In" : "New Check-In")
             .navigationBarTitleDisplayMode(.inline)

@@ -32,4 +32,13 @@ enum JournalSpace: String, CaseIterable, Codable, Identifiable, Hashable {
         case .professional: return "briefcase.fill"
         }
     }
+    
+    var reflectionPrompt: String {
+        switch self {
+        case .personal:
+            return "What gave you energy today?"
+        case .professional:
+            return "What was your biggest progress today?"
+        }
+    }
 }

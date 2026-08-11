@@ -16,6 +16,8 @@ final class CheckinViewModel: ObservableObject {
     @Published var energyLevel: Int
     @Published var stressLevel: Int
     @Published var note: String
+    @Published var tagsText: String
+
     
     init(space: JournalSpace, existingCheckin: CheckIn? = nil) {
         self.space = space
@@ -24,7 +26,7 @@ final class CheckinViewModel: ObservableObject {
         self.energyLevel = existingCheckin?.energyLevel ?? 3
         self.stressLevel = existingCheckin?.stressLevel ?? 3
         self.note = existingCheckin?.note ?? ""
-        
+        self.tagsText = existingCheckin?.tags.joined(separator: ", ") ?? ""
     }
     
     func makeCheckin() -> CheckIn {
@@ -33,7 +35,16 @@ final class CheckinViewModel: ObservableObject {
             mood: mood,
             energyLevel: energyLevel,
             stressLevel: stressLevel,
-            note: note
+            note: note,
+            tags: parsedTags
         )
+    }
+    
+    private var parsedTags: [String] {
+        tagsText
+            .split(separator: ",")
+            .map {$0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .filter{!$0.isEmpty}
     }
 }
