@@ -34,6 +34,7 @@ struct HomeView: View {
                         checkIn: viewModel.checkIn(
                             for: space
                         ),
+                        streak: viewModel.currentStreak(for: space),
                         onCheckIn: {
                             selectedSpace = space
                         }
@@ -175,6 +176,7 @@ private struct SpaceCheckInCard: View {
     
     let space: JournalSpace
     let checkIn: CheckIn?
+    let streak: Int
     let onCheckIn: () -> Void
     
     var body: some View {
@@ -259,7 +261,16 @@ private struct SpaceCheckInCard: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            
+
+            HStack {
+                Label(
+                    "\(streak) day streak",
+                    systemImage: "flame.fill"
+                )
+                .foregroundStyle(.orange)
+            }
+            .font(.caption)
+
             Button("Edit Check-In") {
                 onCheckIn()
             }

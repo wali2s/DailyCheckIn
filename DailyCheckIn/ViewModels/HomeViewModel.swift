@@ -31,8 +31,24 @@ final class HomeViewModel: ObservableObject {
     }
     
     var currentStreak: Int {
+        currentStreak(for: nil)
+    }
+
+    func currentStreak(
+        for space: JournalSpace?
+    ) -> Int {
+        let relevantCheckIns: [CheckIn]
+        
+        if let space {
+            relevantCheckIns = checkIns.filter {
+                $0.space == space
+            }
+        } else {
+            relevantCheckIns = checkIns
+        }
+        
         let checkInDays = Set(
-            checkIns.map { checkIn in
+            relevantCheckIns.map { checkIn in
                 calendar.startOfDay(
                     for: checkIn.date
                 )

@@ -111,6 +111,60 @@ final class StatisticsViewModel: ObservableObject {
         )
     }
     
+    var insights: [String] {
+        guard !filteredCheckIns.isEmpty else {
+            return [
+                "Create some check-ins to see personal insights."
+            ]
+        }
+        
+        var generatedInsights: [String] = []
+        
+        if averageMood >= 4 {
+            generatedInsights.append(
+                "Your average mood is positive."
+            )
+        } else if averageMood <= 2 {
+            generatedInsights.append(
+                "Your average mood has been low."
+            )
+        } else {
+            generatedInsights.append(
+                "Your average mood has been balanced."
+            )
+        }
+        
+        if averageStress >= 4 {
+            generatedInsights.append(
+                "Your stress level has been relatively high."
+            )
+        } else if averageStress <= 2 {
+            generatedInsights.append(
+                "Your stress level has been relatively low."
+            )
+        } else {
+            generatedInsights.append(
+                "Your stress level has been moderate."
+            )
+        }
+        
+        if averageEnergy >= 4 {
+            generatedInsights.append(
+                "Your energy level has been strong."
+            )
+        } else if averageEnergy <= 2 {
+            generatedInsights.append(
+                "Your energy level has been low."
+            )
+        } else {
+            generatedInsights.append(
+                "Your energy level has been stable."
+            )
+        }
+        
+        return generatedInsights
+    }
+    
     private func average(_ values: [Double]) -> Double {
         guard !values.isEmpty else { return 0 }
         

@@ -151,6 +151,18 @@ struct StatisticsView: View {
                 }
             }
             .navigationTitle("Statistics")
+            
+            Section("Insights") {
+                ForEach(
+                    viewModel.insights,
+                    id: \.self
+                ) { insight in
+                    Label(
+                        insight,
+                        systemImage: "lightbulb.fill"
+                    )
+                }
+            }
         }
     }
 }
