@@ -17,7 +17,7 @@ struct DailyCheckInTests {
             mood: .good,
             energyLevel: 4,
             stressLevel: 2,
-            note: "had a productive day",
+            note: "had a productive day.",
             tags: ["Productive"]
         )
         
@@ -25,7 +25,7 @@ struct DailyCheckInTests {
         #expect(checkIn.mood == .good)
         #expect(checkIn.energyLevel == 4)
         #expect(checkIn.stressLevel == 2)
-        #expect(checkIn.note == "Had a productive day.")
+        #expect(checkIn.note == "had a productive day.")
         #expect(checkIn.tags == ["Productive"])
     }
     

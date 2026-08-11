@@ -10,7 +10,7 @@ import Combine
 
 final class HomeViewModel: ObservableObject {
     
-    @Published private (set) var checkIns: [CheckIn] = []
+    @Published private(set) var checkIns: [CheckIn] = []
     @Published var selectedSpace: JournalSpace = .personal
     
     private let calendar = Calendar.current

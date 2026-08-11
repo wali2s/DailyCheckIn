@@ -57,6 +57,8 @@ struct CheckInView: View {
                         axis: .vertical
                     )
                     .lineLimit(4...8)
+                    .accessibilityIdentifier("checkInNoteTextField")
+
                 }
             }
             .navigationTitle("New Check-In")
@@ -74,6 +76,7 @@ struct CheckInView: View {
                         onSave(checkIn)
                         dismiss()
                     }
+                    .accessibilityIdentifier("saveCheckInButton")
                 }
             }
         }

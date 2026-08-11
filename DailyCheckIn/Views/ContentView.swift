@@ -112,6 +112,7 @@ struct ContentView: View {
                         onCheckIn()
                     }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("createCheckInButton. \(space.rawValue)")
                 }
             }
             .padding()
