@@ -11,33 +11,130 @@ struct HistoryView: View {
     
     @ObservedObject var viewModel: HomeViewModel
     @State private var selectedSpace: JournalSpace?
+    @State private var searchText = ""
+    @State private var selectedCheckIn: CheckIn?
     
     private var filteredCheckIns: [CheckIn] {
-            let sortedCheckIns = viewModel.checkIns.sorted {
-                $0.date > $1.date
-            }
-            
-            guard let selectedSpace else {
-                return sortedCheckIns
-            }
-            
-            return sortedCheckIns.filter {
+        let spaceFilteredCheckIns: [CheckIn]
+        
+        if let selectedSpace {
+            spaceFilteredCheckIns = viewModel.checkIns.filter {
                 $0.space == selectedSpace
             }
+        } else {
+            spaceFilteredCheckIns = viewModel.checkIns
         }
-    
+        
+        let trimmedSearchText = searchText
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+        
+        guard !trimmedSearchText.isEmpty else {
+            return spaceFilteredCheckIns.sorted {
+                $0.date > $1.date
+            }
+        }
+        
+        return spaceFilteredCheckIns
+            .filter { checkIn in
+                let noteMatches = checkIn.note
+                    .localizedCaseInsensitiveContains(
+                        trimmedSearchText
+                    )
+                
+                let tagMatches = checkIn.tags.contains {
+                    $0.localizedCaseInsensitiveContains(
+                        trimmedSearchText
+                    )
+                }
+                
+                let spaceMatches = checkIn.space.title
+                    .localizedCaseInsensitiveContains(
+                        trimmedSearchText
+                    )
+                
+                let moodMatches = checkIn.mood.title
+                    .localizedCaseInsensitiveContains(
+                        trimmedSearchText
+                    )
+                
+                return noteMatches ||
+                    tagMatches ||
+                    spaceMatches ||
+                    moodMatches
+            }
+            .sorted {
+                $0.date > $1.date
+            }
+    }
     
     var body: some View {
-        Group {
+        List {
+            Section {
+                Picker(
+                    "Space",
+                    selection: $selectedSpace
+                ) {
+                    Text("All")
+                        .tag(nil as JournalSpace?)
+                    
+                    ForEach(JournalSpace.allCases) { space in
+                        Text(space.title)
+                            .tag(Optional(space))
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            
             if filteredCheckIns.isEmpty {
-                emptyState
+                ContentUnavailableView(
+                    "No Check-Ins Found",
+                    systemImage: "magnifyingglass",
+                    description: Text(
+                        "Try a different search or filter."
+                    )
+                )
+                .listRowBackground(
+                    Color.clear
+                )
             } else {
-                historyList
+                Section {
+                    ForEach(filteredCheckIns) { checkIn in
+                        NavigationLink {
+                            CheckInDetailView(
+                                checkIn: checkIn
+                            ) {
+                                selectedCheckIn = checkIn
+                            }
+                        } label: {
+                            HistoryRow(
+                                checkIn: checkIn
+                            )
+                        }                    }
+                    .onDelete(
+                        perform: deleteCheckIns
+                    )
+                }
             }
         }
         .navigationTitle("History")
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(
+                displayMode: .always
+            ),
+            prompt: "Search notes and tags"
+        )
+        .sheet(item: $selectedCheckIn) { checkIn in
+            CheckInView(
+                space: checkIn.space,
+                existingCheckIn: checkIn
+            ) { updatedCheckIn in
+                viewModel.addCheckIn(updatedCheckIn)
+            }
+        }
     }
-    
     
     private var emptyState: some View {
         ContentUnavailableView(

@@ -9,7 +9,16 @@ import SwiftUI
 
 struct CheckInDetailView: View {
     
-    let checkIn : CheckIn
+    let checkIn: CheckIn
+    let onEdit: () -> Void
+    
+    init(
+        checkIn: CheckIn,
+        onEdit: @escaping () -> Void = {}
+    ) {
+        self.checkIn = checkIn
+        self.onEdit = onEdit
+    }
     
     var body: some View {
         List {
@@ -37,14 +46,22 @@ struct CheckInDetailView: View {
             }
             
             Section("Daily Metrics") {
-                DetailRow(title: "Energy", value: "\(checkIn.energyLevel)/5", systemImage: "bolt.fill")
+                DetailRow(
+                    title: "Energy",
+                    value: "\(checkIn.energyLevel)/5",
+                    systemImage: "bolt.fill"
+                )
                 
-                DetailRow(title: "Stress", value: "\(checkIn.stressLevel)/5", systemImage: "waveform.path.ecg")
+                DetailRow(
+                    title: "Stress",
+                    value: "\(checkIn.stressLevel)/5",
+                    systemImage: "waveform.path.ecg"
+                )
             }
             
             Section("Note") {
                 if checkIn.note.isEmpty {
-                    Text("No note added")
+                    Text("No note added.")
                         .foregroundStyle(.secondary)
                 } else {
                     Text(checkIn.note)
@@ -53,41 +70,69 @@ struct CheckInDetailView: View {
             
             if !checkIn.tags.isEmpty {
                 Section("Tags") {
-                    ForEach(checkIn.tags, id: \.self) { tag in
-                        Label(tag,systemImage: "tag.fill")
+                    ForEach(
+                        checkIn.tags,
+                        id: \.self
+                    ) { tag in
+                        Label(
+                            tag,
+                            systemImage: "tag.fill"
+                        )
                     }
                 }
             }
-            
         }
         .navigationTitle("Check-In Details")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    
-    private struct DetailRow: View {
-        let title: String
-        let value: String
-        let systemImage: String
-        
-        var body: some View {
-            HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .foregroundStyle(.blue)
-                    .frame(width:24)
-                
-                Text(title)
-                    .foregroundStyle(.secondary)
-                
-                Spacer()
-                
-                Text(value)
-                    .multilineTextAlignment(.trailing)
+        .toolbar {
+            ToolbarItem(
+                placement: .navigationBarTrailing
+            ) {
+                Button("Edit") {
+                    onEdit()
+                }
             }
         }
     }
 }
 
-#Preview {
-    CheckInDetailView(checkIn: CheckIn(space: .personal, mood: .good))
+private struct DetailRow: View {
+    
+    let title: String
+    let value: String
+    let systemImage: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(.blue)
+                .frame(width: 24)
+            
+            Text(title)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+#Preview("Check-In Details") {
+    NavigationStack {
+        CheckInDetailView(
+            checkIn: CheckIn(
+                space: .professional,
+                mood: .good,
+                energyLevel: 4,
+                stressLevel: 2,
+                note: "Worked on the Daily Check-In app.",
+                tags: [
+                    "Development",
+                    "Focus"
+                ]
+            )
+        )
+    }
 }

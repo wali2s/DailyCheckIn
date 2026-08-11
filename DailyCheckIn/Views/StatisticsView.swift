@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct StatisticsView: View {
     
@@ -25,9 +26,101 @@ struct StatisticsView: View {
                         .tag(nil as JournalSpace?)
                     
                     ForEach(JournalSpace.allCases) { space in
-                        Text(space.title).tag(Optional(space))
+                        Text(space.title)
+                            .tag(Optional(space))
                     }
-                }.pickerStyle(.segmented)
+                }
+                .pickerStyle(.segmented)
+                
+                Picker(
+                    "Period",
+                    selection: $viewModel.selectedPeriod
+                ) {
+                    ForEach(
+                        StatisticsPeriod.allCases
+                    ) { period in
+                        Text(period.title)
+                            .tag(period)
+                    }
+                }
+            }
+            
+            if !viewModel.filteredCheckIns.isEmpty {
+                Section("Mood Trend") {
+                    Chart {
+                        ForEach(
+                            viewModel.filteredCheckIns.sorted {
+                                $0.date < $1.date
+                            }
+                        ) { checkIn in
+                            LineMark(
+                                x: .value(
+                                    "Date",
+                                    checkIn.date
+                                ),
+                                y: .value(
+                                    "Mood",
+                                    checkIn.mood.rawValue
+                                ),
+                                series: .value(
+                                    "Space",
+                                    checkIn.space.title
+                                )
+                            )
+                            .foregroundStyle(
+                                by: .value(
+                                    "Space",
+                                    checkIn.space.title
+                                )
+                            )
+                            
+                            PointMark(
+                                x: .value(
+                                    "Date",
+                                    checkIn.date
+                                ),
+                                y: .value(
+                                    "Mood",
+                                    checkIn.mood.rawValue
+                                )
+                            )
+                            .foregroundStyle(
+                                by: .value(
+                                    "Space",
+                                    checkIn.space.title
+                                )
+                            )
+                        }
+                        
+                        RuleMark(
+                            y: .value(
+                                "Neutral",
+                                3
+                            )
+                        )
+                        .foregroundStyle(.gray)
+                        .lineStyle(
+                            StrokeStyle(
+                                dash: [5]
+                            )
+                        )
+                    }
+                    .frame(height: 220)
+                    .chartYScale(
+                        domain: 1...5
+                    )
+                    .chartYAxis {
+                        AxisMarks(
+                            values: [1, 2, 3, 4, 5]
+                        )
+                    }
+                    .chartLegend(
+                        position: .bottom
+                    )
+                    .accessibilityLabel(
+                        "Mood trend chart"
+                    )
+                }
             }
             
             Section("Overview") {

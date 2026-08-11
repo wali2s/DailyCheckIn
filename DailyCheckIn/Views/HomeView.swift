@@ -20,6 +20,14 @@ struct HomeView: View {
                 StreakCard(
                        streak: viewModel.currentStreak
                    )
+                
+                DailyProgressCard(
+                    completedSpaces: viewModel.completedSpacesToday,
+                    totalSpaces: viewModel.totalSpaces,
+                    progress: viewModel.dailyCompletionProgress,
+                    message: viewModel.dailyCompletionMessage
+                )
+                
                 ForEach(JournalSpace.allCases) { space in
                     SpaceCheckInCard(
                         space: space,
@@ -69,6 +77,48 @@ struct HomeView: View {
         }
     }
     
+}
+
+private struct DailyProgressCard: View {
+    
+    let completedSpaces: Int
+    let totalSpaces: Int
+    let progress: Double
+    let message: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.green)
+                
+                Text("Today's Progress")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Text("\(completedSpaces)/\(totalSpaces)")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                
+                ProgressView(value: progress, total: 1.0)
+                    .tint(.green)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(
+                Color.green.opacity(0.10)
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: 20
+                )
+            )
+        }
+    }
 }
 
 private struct StreakCard: View {

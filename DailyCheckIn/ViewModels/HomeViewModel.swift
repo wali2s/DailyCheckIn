@@ -117,4 +117,29 @@ final class HomeViewModel: ObservableObject {
     private func saveCheckIns() {
         storageService.saveCheckIns(checkIns)
     }
+    
+    var completedSpacesToday: Int {
+        JournalSpace.allCases.filter { space in
+            checkIn(for: space) != nil
+        }
+        .count
+    }
+    
+    var totalSpaces: Int {
+        JournalSpace.allCases.count
+    }
+    
+    var dailyCompletionProgress: Double {
+        guard totalSpaces > 0 else { return 0}
+        
+        return Double (completedSpacesToday) / Double(totalSpaces)
+    }
+    
+    var dailyCompletionMessage: String {
+        if completedSpacesToday == 0 {
+            return "Start your daily check-in."
+        }
+        
+        return "All spaces completed today."
+    }
 }
