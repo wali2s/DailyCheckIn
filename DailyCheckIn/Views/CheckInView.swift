@@ -12,12 +12,15 @@ struct CheckInView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: CheckinViewModel
     
+    let isEditing: Bool
     let onSave: (CheckIn) -> Void
     
     init(space: JournalSpace,
+         existingCheckIn: CheckIn? = nil,
          onSave: @escaping (CheckIn) -> Void
     ){
-        _viewModel = StateObject(wrappedValue: CheckinViewModel(space: space))
+        _viewModel = StateObject(wrappedValue: CheckinViewModel(space: space, existingCheckin: existingCheckIn))
+        self.isEditing = existingCheckIn != nil
         self.onSave = onSave
     }
     
@@ -61,7 +64,7 @@ struct CheckInView: View {
 
                 }
             }
-            .navigationTitle("New Check-In")
+            .navigationTitle(isEditing ? "Edit Check-In" : "New Check-In")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction ) {

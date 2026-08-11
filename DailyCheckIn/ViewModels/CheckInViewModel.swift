@@ -12,13 +12,19 @@ final class CheckinViewModel: ObservableObject {
     
     let space: JournalSpace
     
-    @Published var mood: Mood = .neutral
-    @Published var energyLevel: Int = 3
-    @Published var stressLevel: Int = 3
-    @Published var note: String = ""
+    @Published var mood: Mood
+    @Published var energyLevel: Int
+    @Published var stressLevel: Int
+    @Published var note: String
     
-    init(space: JournalSpace) {
+    init(space: JournalSpace, existingCheckin: CheckIn? = nil) {
         self.space = space
+        
+        self.mood = existingCheckin?.mood ?? .neutral
+        self.energyLevel = existingCheckin?.energyLevel ?? 3
+        self.stressLevel = existingCheckin?.stressLevel ?? 3
+        self.note = existingCheckin?.note ?? ""
+        
     }
     
     func makeCheckin() -> CheckIn {

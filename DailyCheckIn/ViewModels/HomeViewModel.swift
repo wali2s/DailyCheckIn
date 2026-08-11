@@ -41,7 +41,31 @@ final class HomeViewModel: ObservableObject {
     }
     
     func addCheckIn(_ checkIn: CheckIn) {
-        checkIns.append(checkIn)
+        if let existingIndex = checkIns.firstIndex(where: { existingCheckIn in
+            existingCheckIn.space == checkIn.space &&
+            calendar.isDate(
+                existingCheckIn.date,
+                inSameDayAs: checkIn.date
+            )
+        }) {
+            let existingCheckIn = checkIns[existingIndex]
+            
+            let updatedCheckIn = CheckIn(
+                id: existingCheckIn.id,
+                date: checkIn.date,
+                space: checkIn.space,
+                mood: checkIn.mood,
+                energyLevel: checkIn.energyLevel,
+                stressLevel: checkIn.stressLevel,
+                note: checkIn.note,
+                tags: checkIn.tags
+            )
+            
+            checkIns[existingIndex] = updatedCheckIn
+        } else {
+            checkIns.append(checkIn)
+        }
+        
         saveCheckIns()
     }
     

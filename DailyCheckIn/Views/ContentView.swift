@@ -43,7 +43,10 @@ struct ContentView: View {
            }
             .navigationTitle("Daily Check-In")
             .sheet(item: $selectedSpace) { space in
-                CheckInView(space: space) { newCheckIn in
+                CheckInView(
+                    space: space,
+                    existingCheckIn: viewModel.checkIn(for: space)
+                ) { newCheckIn in
                     viewModel.addCheckIn(newCheckIn)
                 }
             }
@@ -111,6 +114,12 @@ struct ContentView: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    
+                    Button("Edit Check-In") {
+                        onCheckIn()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("createCheckInButton.\(space.rawValue)")
                 } else {
                     Text("No check-in yet")
                         .foregroundStyle(.secondary)
