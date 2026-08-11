@@ -10,7 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     
     @ObservedObject var homeViewModel: HomeViewModel
-    
+    @State private var isShowingDeleteConfirmation = false
     @StateObject private var viewModel = SettingsViewModel()
     
     private let exportService = CheckInExportService()
@@ -116,6 +116,16 @@ struct SettingsView: View {
                     )
                     .foregroundStyle(.secondary)
                 }
+                
+                Button(
+                    "Delete All Check-Ins",
+                    role: .destructive
+                ) {
+                    isShowingDeleteConfirmation = true
+                }
+                .disabled(
+                    homeViewModel.checkIns.isEmpty
+                )
             }
             
             if !viewModel.statusMessage.isEmpty {
@@ -127,6 +137,24 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .confirmationDialog(
+            "Delete All Check-Ins",
+            isPresented: $isShowingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                "Delete All Check-Ins",
+                role: .destructive
+            ) {
+                homeViewModel.deleteAllCheckIns()
+            }
+            
+            Button("Cancel", role: .cancel) {
+                isShowingDeleteConfirmation = false
+            }
+        } message: {
+            Text("This action connat be undone. All personal and professional check-ins will be permanently deleted.")
+        }
     }
 }
 

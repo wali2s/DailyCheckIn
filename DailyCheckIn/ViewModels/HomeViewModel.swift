@@ -123,6 +123,11 @@ final class HomeViewModel: ObservableObject {
         saveCheckIns()
     }
     
+    func deleteAllCheckIns() {
+        checkIns.removeAll()
+        saveCheckIns()
+    }
+    
     func checkIn ( for space: JournalSpace) -> CheckIn? {
         todayCheckIns.first { checkin in
             checkin.space == space
