@@ -96,7 +96,7 @@ final class PreviewCheckInStorageService: CheckInStorageService {
         CheckIn(
             date: Date(),
             space: .professional,
-            mood: .neutral,
+            mood: .sad,
             energyLevel: 3,
             stressLevel: 4,
             note: "Worked on the Daily Check-In app.",
@@ -105,7 +105,7 @@ final class PreviewCheckInStorageService: CheckInStorageService {
         CheckIn(
             date: Date().addingTimeInterval(-86_400),
             space: .personal,
-            mood: .veryGood,
+            mood: .happy,
             energyLevel: 5,
             stressLevel: 1,
             note: "Spent time with my family.",

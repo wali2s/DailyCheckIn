@@ -213,7 +213,7 @@ final class StatisticsPreviewStorageService: CheckInStorageService {
         CheckIn(
             date: Date().addingTimeInterval(-86_400),
             space: .personal,
-            mood: .veryGood,
+            mood: .calm,
             energyLevel: 5,
             stressLevel: 1,
             note: "Spent time with my family.",

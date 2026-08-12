@@ -96,7 +96,7 @@ final class StatisticsViewModel: ObservableObject {
     var totalCheckIns: Int { checkIns.count }
     
     var averageMood: Double {
-        average(filteredCheckIns.map {Double($0.mood.rawValue)})
+        average(filteredCheckIns.map {$0.mood.score})
     }
     
     var averageEnergy: Double {

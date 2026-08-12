@@ -15,11 +15,11 @@ struct HomeView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(
+                alignment: .leading,
+                spacing: AppSpacing.section
+            ) {
                 headerSection
-                StreakCard(
-                       streak: viewModel.currentStreak
-                   )
                 
                 DailyProgressCard(
                     completedSpaces: viewModel.completedSpacesToday,
@@ -28,29 +28,29 @@ struct HomeView: View {
                     message: viewModel.dailyCompletionMessage
                 )
                 
-                ForEach(JournalSpace.allCases) { space in
-                    SpaceCheckInCard(
-                        space: space,
-                        checkIn: viewModel.checkIn(
-                            for: space
-                        ),
-                        streak: viewModel.currentStreak(for: space),
-                        onCheckIn: {
-                            selectedSpace = space
-                        }
-                    )
-                }
+                StreakCard(
+                    streak: viewModel.currentStreak
+                )
+                
+                spacesSection
             }
-            .padding()
+            .padding(.horizontal, AppSpacing.screenHorizontal)
+            .padding(.vertical, AppSpacing.standard)
         }
-        .navigationTitle("Daily Check-In")
+        .scrollIndicators(.hidden)
+        .background(AppColors.canvas)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(
                 placement: .navigationBarTrailing
             ) {
-                Text(Date.now, style: .date)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    Date.now,
+                    style: .date
+                )
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
             }
         }
         .sheet(item: $selectedSpace) { space in
@@ -66,18 +66,61 @@ struct HomeView: View {
     }
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Today")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.small
+        ) {
+            Text("Hello")
+                .font(.system(
+                    size: 42,
+                    weight: .bold,
+                    design: .rounded
+                ))
+                .foregroundStyle(AppColors.textPrimary)
+            
+            Text("How are you feeling today?")
+                .font(.title3)
+                .fontWeight(.medium)
+                .foregroundStyle(AppColors.textPrimary)
             
             Text(
                 "Take a moment to check in with yourself."
             )
-            .foregroundStyle(.secondary)
+            .font(.subheadline)
+            .foregroundStyle(AppColors.textSecondary)
         }
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
+        )
     }
     
+    private var spacesSection: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
+            Text("Your Spaces")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundStyle(AppColors.textPrimary)
+            
+            ForEach(JournalSpace.allCases) { space in
+                SpaceCheckInCard(
+                    space: space,
+                    checkIn: viewModel.checkIn(
+                        for: space
+                    ),
+                    streak: viewModel.currentStreak(
+                        for: space
+                    ),
+                    onCheckIn: {
+                        selectedSpace = space
+                    }
+                )
+            }
+        }
+    }
 }
 
 private struct DailyProgressCard: View {
@@ -88,37 +131,62 @@ private struct DailyProgressCard: View {
     let message: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
             HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.green)
-                
-                Text("Today's Progress")
-                    .font(.headline)
+                HStack(
+                    spacing: AppSpacing.small
+                ) {
+                    Image(
+                        systemName: "checkmark.circle.fill"
+                    )
+                    .font(.title3)
+                    .foregroundStyle(
+                        AppColors.accentBlue
+                    )
+                    
+                    Text("Today's Progress")
+                        .font(.headline)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                }
                 
                 Spacer()
                 
-                Text("\(completedSpaces)/\(totalSpaces)")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                
-                ProgressView(value: progress, total: 1.0)
-                    .tint(.green)
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(
-                Color.green.opacity(0.10)
-            )
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: 20
+                Text(
+                    "\(completedSpaces)/\(totalSpaces)"
                 )
+                .font(.headline)
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+            }
+            
+            ProgressView(
+                value: progress,
+                total: 1.0
             )
+            .tint(AppColors.accentBlue)
+            .scaleEffect(
+                x: 1,
+                y: 1.5,
+                anchor: .center
+            )
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
         }
+        .appCardStyle(
+            backgroundColor: AppColors.surface,
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
+        )
     }
 }
 
@@ -127,47 +195,66 @@ private struct StreakCard: View {
     let streak: Int
     
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "flame.fill")
-                .font(.largeTitle)
-                .foregroundStyle(.orange)
+        HStack(
+            spacing: AppSpacing.standard
+        ) {
+            ZStack {
+                Circle()
+                    .fill(
+                        AppColors.accentYellow
+                            .opacity(0.25)
+                    )
+                    .frame(
+                        width: 52,
+                        height: 52
+                    )
+                
+                Image(systemName: "flame.fill")
+                    .font(.title2)
+                    .foregroundStyle(
+                        AppColors.accentYellow
+                    )
+            }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(
+                alignment: .leading,
+                spacing: 4
+            ) {
                 Text("Current Streak")
                     .font(.headline)
+                    .foregroundStyle(
+                        AppColors.textPrimary
+                    )
                 
                 if streak == 0 {
                     Text("Start your streak today")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(
+                            AppColors.textSecondary
+                        )
                 } else if streak == 1 {
                     Text("1 day")
                         .font(.title3)
                         .fontWeight(.semibold)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
                 } else {
                     Text("\(streak) days")
                         .font(.title3)
                         .fontWeight(.semibold)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
                 }
             }
             
             Spacer()
         }
-        .padding()
-        .background(
-            LinearGradient(
-                colors: [
-                    .orange.opacity(0.2),
-                    .yellow.opacity(0.15)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 20
-            )
+        .appCardStyle(
+            backgroundColor: AppColors.surface,
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
         )
     }
 }
@@ -179,40 +266,77 @@ private struct SpaceCheckInCard: View {
     let streak: Int
     let onCheckIn: () -> Void
     
+    private var cardBackgroundColor: Color {
+        AppColors.surface
+    }
+    
+    private var iconBackgroundColor: Color {
+        switch space {
+        case .personal:
+            return AppColors.accentMint
+        case .professional:
+            return AppColors.accentBlue
+        }
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
             header
             
-            Divider()
-            
             if let checkIn {
-                existingCheckInContent(checkIn)
+                existingCheckInContent(
+                    checkIn
+                )
             } else {
                 emptyCheckInContent
             }
         }
-        .padding()
-        .background(.regularMaterial)
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 20
-            )
+        .appCardStyle(
+            backgroundColor: cardBackgroundColor,
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
         )
     }
     
     private var header: some View {
-        HStack {
-            Image(systemName: space.iconName)
-                .font(.title2)
-                .foregroundStyle(.blue)
+        HStack(
+            alignment: .top,
+            spacing: AppSpacing.standard
+        ) {
+            ZStack {
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.small,
+                    style: .continuous
+                )
+                .fill(iconBackgroundColor)
+                .frame(
+                    width: 48,
+                    height: 48
+                )
+                
+                Image(systemName: space.iconName)
+                    .font(.title3)
+                    .foregroundStyle(.black)
+            }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(
+                alignment: .leading,
+                spacing: 4
+            ) {
                 Text(space.title)
                     .font(.headline)
+                    .foregroundStyle(
+                        AppColors.textPrimary
+                    )
                 
                 Text(space.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(
+                        AppColors.textSecondary
+                    )
             }
             
             Spacer()
@@ -222,23 +346,39 @@ private struct SpaceCheckInCard: View {
     private func existingCheckInContent(
         _ checkIn: CheckIn
     ) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(checkIn.mood.emoji)
-                    .font(.largeTitle)
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
+            HStack(
+                spacing: AppSpacing.standard
+            ) {
+                Image(systemName: checkIn.mood.iconName)
+                        .foregroundStyle(checkIn.mood.iconColor)
+                    .font(.system(size: 42))
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(
+                    alignment: .leading,
+                    spacing: 4
+                ) {
                     Text(checkIn.mood.title)
                         .font(.headline)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
                     
                     if checkIn.note.isEmpty {
                         Text("No note added.")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(
+                                AppColors.textSecondary
+                            )
                     } else {
                         Text(checkIn.note)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(
+                                AppColors.textSecondary
+                            )
                             .lineLimit(2)
                     }
                 }
@@ -260,39 +400,58 @@ private struct SpaceCheckInCard: View {
                 )
             }
             .font(.caption)
-            .foregroundStyle(.secondary)
-
+            .foregroundStyle(
+                AppColors.textSecondary
+            )
+            
             HStack {
                 Label(
                     "\(streak) day streak",
                     systemImage: "flame.fill"
                 )
-                .foregroundStyle(.orange)
+                .font(.caption)
+                .foregroundStyle(
+                    AppColors.accentYellow
+                )
+                
+                Spacer()
+                
+                Button("Edit") {
+                    onCheckIn()
+                }
+                .buttonStyle(.bordered)
+                .tint(AppColors.textPrimary)
             }
-            .font(.caption)
-
-            Button("Edit Check-In") {
-                onCheckIn()
-            }
-            .buttonStyle(.bordered)
         }
     }
     
     private var emptyCheckInContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
             Text("No check-in yet")
-                .foregroundStyle(.secondary)
+                .font(.headline)
+                .foregroundStyle(
+                    AppColors.textPrimary
+                )
             
             Text(
                 "Take a moment to reflect on your day."
             )
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(
+                AppColors.textSecondary
+            )
             
             Button("Create Check-In") {
                 onCheckIn()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(
+                PrimaryButtonStyle(
+                    backgroundColor: iconBackgroundColor
+                )
+            )
             .accessibilityIdentifier(
                 "createCheckInButton.\(space.rawValue)"
             )
@@ -300,13 +459,12 @@ private struct SpaceCheckInCard: View {
     }
 }
 
-
-
-#Preview("Home - Sample Data") {
+#Preview("Home - New Design") {
     NavigationStack {
         HomeView(
             viewModel: HomeViewModel(
-                storageService: PreviewCheckInStorageService()
+                storageService:
+                    PreviewCheckInStorageService()
             )
         )
     }

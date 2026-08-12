@@ -10,21 +10,15 @@ import SwiftUI
 enum AppColors {
     
     static let canvas = Color(
-        red: 0.91,
-        green: 0.96,
-        blue: 0.96
+        UIColor.systemGroupedBackground
     )
     
     static let surface = Color(
-        red: 0.98,
-        green: 0.99,
-        blue: 0.99
+        UIColor.systemBackground
     )
     
     static let surfaceSecondary = Color(
-        red: 0.94,
-        green: 0.97,
-        blue: 0.97
+        UIColor.secondarySystemBackground
     )
     
     static let accentBlue = Color(
@@ -54,16 +48,4 @@ enum AppColors {
     static let textPrimary = Color.primary
     
     static let textSecondary = Color.secondary
-    
-    static let darkSurface = Color(
-        red: 0.08,
-        green: 0.08,
-        blue: 0.08
-    )
-    
-    static let darkCard = Color(
-        red: 0.14,
-        green: 0.14,
-        blue: 0.14
-    )
 }

@@ -25,20 +25,17 @@ struct PrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(.black)
             .frame(
                 maxWidth: .infinity,
-                minHeight: 52
+                minHeight: 50
             )
             .background(backgroundColor)
             .clipShape(
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.pill,
-                    style: .continuous
-                )
-            )
-            .scaleEffect(
-                configuration.isPressed ? 0.97 : 1.0
+                Capsule()
             )
             .opacity(
-                configuration.isPressed ? 0.85 : 1.0
+                configuration.isPressed ? 0.82 : 1.0
+            )
+            .scaleEffect(
+                configuration.isPressed ? 0.98 : 1.0
             )
             .animation(
                 .easeOut(duration: 0.15),

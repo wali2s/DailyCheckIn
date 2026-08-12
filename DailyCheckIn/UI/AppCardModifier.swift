@@ -35,11 +35,21 @@ struct AppCardModifier: ViewModifier {
                     style: .continuous
                 )
             )
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: cornerRadius,
+                    style: .continuous
+                )
+                .stroke(
+                    Color.primary.opacity(0.05),
+                    lineWidth: 1
+                )
+            }
             .shadow(
-                color: Color.black.opacity(0.05),
-                radius: 12,
+                color: Color.black.opacity(0.035),
+                radius: 8,
                 x: 0,
-                y: 6
+                y: 3
             )
     }
 }
