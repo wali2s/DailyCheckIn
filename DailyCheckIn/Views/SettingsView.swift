@@ -9,11 +9,13 @@ import SwiftUI
 
 struct SettingsView: View {
     
-    @ObservedObject var homeViewModel: HomeViewModel
+    @AppStorage("app_language")
+    private var appLanguage = "en"
     
+    @ObservedObject var homeViewModel: HomeViewModel
+    @ObservedObject var viewModel: SettingsViewModel
     @State private var isShowingDeleteConfirmation = false
     
-    @StateObject private var viewModel = SettingsViewModel()
     
     private let exportService = CheckInExportService()
     
@@ -25,6 +27,46 @@ struct SettingsView: View {
     
     var body: some View {
         Form {
+            Section("Profile") {
+                TextField(
+                    "Your name",
+                    text: Binding(
+                        get: {
+                            viewModel.displayName
+                        },
+                        set: { newValue in
+                            viewModel.updateDisplayName(
+                                newValue
+                            )
+                        }
+                    )
+                )
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                
+                Label(
+                    viewModel.displayName,
+                    systemImage: "person.fill"
+                )
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+            }
+            
+            Section("Language") {
+                Picker(
+                    "Language",
+                    selection: $appLanguage
+                ) {
+                    Text("English")
+                        .tag("en")
+                    
+                    Text("Deutsch")
+                        .tag("de")
+                }
+                .pickerStyle(.menu)
+            }
+            
             reminderSection(
                 title: "Personal Reminder",
                 isEnabled: Binding(
@@ -212,7 +254,8 @@ struct SettingsView: View {
             homeViewModel: HomeViewModel(
                 storageService:
                     PreviewCheckInStorageService()
-            )
+            ),
+            viewModel: SettingsViewModel()
         )
     }
 }

@@ -9,8 +9,15 @@ import SwiftUI
 
 struct ContentView: View {
     
+    @AppStorage("app_language")
+    private var appLanguage = "en"
+    
     @StateObject private var viewModel: HomeViewModel
+    @StateObject private var settingsViewModel =
+        SettingsViewModel()
     @State private var selectedTab = 0
+    
+    
     
     init(
         storageService: CheckInStorageService = UserDefaultsCheckInStorageService()
@@ -25,7 +32,10 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                HomeView(viewModel: viewModel)
+                HomeView(
+                    viewModel: viewModel,
+                    settingsViewModel: settingsViewModel
+                )
             }
             .tabItem {
                 Label(
@@ -61,7 +71,8 @@ struct ContentView: View {
             
             NavigationStack {
                 SettingsView(
-                    homeViewModel: viewModel
+                    homeViewModel: viewModel,
+                    viewModel: settingsViewModel
                 )
             }
             .tabItem {
@@ -72,6 +83,10 @@ struct ContentView: View {
             }
             .tag(3)
         }
+        .environment(
+                \.locale,
+                Locale(identifier: appLanguage)
+            )
     }
 }
 

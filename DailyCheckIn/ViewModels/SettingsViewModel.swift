@@ -12,7 +12,7 @@ final class SettingsViewModel: ObservableObject {
     
     @Published private(set) var personalReminderEnabled: Bool
     @Published private(set) var professionalReminderEnabled: Bool
-    
+    @Published private(set) var displayName: String
     @Published private(set) var personalReminderTime: Date
     @Published private(set) var professionalReminderTime: Date
     
@@ -21,6 +21,8 @@ final class SettingsViewModel: ObservableObject {
     private let notificationService: NotificationService
     private let userDefaults: UserDefaults
     private let calendar = Calendar.current
+    private let displayNameKey = "display_name"
+
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -73,42 +75,70 @@ final class SettingsViewModel: ObservableObject {
             defaultHour: 17,
             defaultMinute: 30
         )
+        
+        self.displayName = userDefaults.string(
+            forKey: displayNameKey
+        ) ?? "YourName"
+    }
+    
+    func updateDisplayName(
+        _ name: String
+    ) {
+        let trimmedName = name
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+        
+        let finalName = trimmedName.isEmpty
+            ? "Wahid"
+            : trimmedName
+        
+        displayName = finalName
+        
+        userDefaults.set(
+            finalName,
+            forKey: displayNameKey
+        )
+        
+        statusMessage = "Name updated."
     }
     
     func updatePersonalReminderEnabled(
         _ isEnabled: Bool
     ) {
-        personalReminderEnabled = isEnabled
-        
-        userDefaults.set(
-            isEnabled,
-            forKey: personalReminderEnabledKey
-        )
-        
-        if isEnabled {
-            schedulePersonalReminder()
-        } else {
+        if !isEnabled {
+            personalReminderEnabled = false
+            
+            userDefaults.set(
+                false,
+                forKey: personalReminderEnabledKey
+            )
+            
             notificationService.cancelPersonalReminder()
             statusMessage = "Personal reminder disabled."
+            return
         }
+        
+        schedulePersonalReminder()
     }
     
     func updateProfessionalReminderEnabled(
         _ isEnabled: Bool
     ) {
-        professionalReminderEnabled = isEnabled
-        
-        userDefaults.set(
-            isEnabled,
-            forKey: professionalReminderEnabledKey
-        )
-        
-        if isEnabled {
-            scheduleProfessionalReminder()
-        } else {
+        if !isEnabled {
+            professionalReminderEnabled = false
+            
+            userDefaults.set(
+                false,
+                forKey: professionalReminderEnabledKey
+            )
+            
             notificationService.cancelProfessionalReminder()
             statusMessage = "Professional reminder disabled."
+            return
         }
+        
+        scheduleProfessionalReminder()
     }
     
     func updatePersonalReminderTime(
@@ -181,7 +211,18 @@ final class SettingsViewModel: ObservableObject {
                     }
                 },
                 receiveValue: { [weak self] in
-                    self?.statusMessage =
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.personalReminderEnabled = true
+                    
+                    self.userDefaults.set(
+                        true,
+                        forKey: self.personalReminderEnabledKey
+                    )
+                    
+                    self.statusMessage =
                         "Personal reminder scheduled."
                 }
             )
@@ -226,7 +267,18 @@ final class SettingsViewModel: ObservableObject {
                     }
                 },
                 receiveValue: { [weak self] in
-                    self?.statusMessage =
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.professionalReminderEnabled = true
+                    
+                    self.userDefaults.set(
+                        true,
+                        forKey: self.professionalReminderEnabledKey
+                    )
+                    
+                    self.statusMessage =
                         "Professional reminder scheduled."
                 }
             )
@@ -287,4 +339,5 @@ final class SettingsViewModel: ObservableObject {
 
 enum SettingsError: Error {
     case notificationPermissionDenied
+    case notificationPermissionNotDetermined
 }

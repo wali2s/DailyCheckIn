@@ -10,10 +10,15 @@ import SwiftUI
 struct CheckInView: View {
     
     @Environment(\.dismiss) private var dismiss
+    
     @StateObject private var viewModel: CheckInViewModel
+    
+    @State private var currentStep = 0
     
     let isEditing: Bool
     let onSave: (CheckIn) -> Void
+    
+    private let totalSteps = 3
     
     init(
         space: JournalSpace,
@@ -40,25 +45,27 @@ struct CheckInView: View {
         }
     }
     
+    private var isLastStep: Bool {
+        currentStep == totalSteps - 1
+    }
+    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(
-                    alignment: .leading,
-                    spacing: AppSpacing.section
-                ) {
-                    spaceHeader
-                    moodSection
-                    energySection
-                    stressSection
-                    reflectionSection
-                    thoughtsSection
-                    tagsSection
+            VStack(
+                spacing: 0
+            ) {
+                progressIndicator
+                
+                ScrollView {
+                    stepContent
+                        .padding(.horizontal, AppSpacing.screenHorizontal)
+                        .padding(.top, AppSpacing.section)
+                        .padding(.bottom, AppSpacing.standard)
                 }
-                .padding(.horizontal, AppSpacing.screenHorizontal)
-                .padding(.vertical, AppSpacing.standard)
+                .scrollIndicators(.hidden)
+                
+                navigationControls
             }
-            .scrollIndicators(.hidden)
             .background(AppColors.canvas)
             .navigationTitle(
                 isEditing
@@ -74,86 +81,67 @@ struct CheckInView: View {
                         dismiss()
                     }
                 }
-                
-                ToolbarItem(
-                    placement: .confirmationAction
-                ) {
-                    Button("Save") {
-                        saveCheckIn()
-                    }
-                    .fontWeight(.semibold)
-                    .tint(AppColors.textPrimary)
-                    .accessibilityIdentifier(
-                        "saveCheckInButton"
-                    )
-                }
             }
         }
     }
     
-    private var spaceHeader: some View {
+    private var progressIndicator: some View {
         HStack(
-            spacing: AppSpacing.standard
+            spacing: 6
         ) {
-            ZStack {
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
-                )
-                .fill(
-                    accentColor.opacity(0.35)
-                )
-                .frame(
-                    width: 52,
-                    height: 52
-                )
-                
-                Image(
-                    systemName: viewModel.space.iconName
-                )
-                .font(.title3)
-                .foregroundStyle(
-                    AppColors.textPrimary
-                )
-            }
-            
-            VStack(
-                alignment: .leading,
-                spacing: 4
-            ) {
-                Text(viewModel.space.title)
-                    .font(.headline)
-                    .foregroundStyle(
-                        AppColors.textPrimary
+            ForEach(
+                0..<totalSteps,
+                id: \.self
+            ) { step in
+                Capsule()
+                    .fill(
+                        step <= currentStep
+                        ? accentColor
+                        : AppColors.surfaceSecondary
                     )
-                
-                Text(
-                    isEditing
-                    ? "Update your reflection"
-                    : "Take a moment for yourself"
-                )
-                .font(.subheadline)
-                .foregroundStyle(
-                    AppColors.textSecondary
-                )
+                    .frame(
+                        height: 6
+                    )
             }
-            
-            Spacer()
         }
-        .appCardStyle(
-            backgroundColor: AppColors.surface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
+        .padding(.horizontal, AppSpacing.screenHorizontal)
+        .padding(.top, AppSpacing.small)
+        .accessibilityElement(
+            children: .ignore
+        )
+        .accessibilityLabel(
+            "Check-In progress"
+        )
+        .accessibilityValue(
+            "Step \(currentStep + 1) of \(totalSteps)"
         )
     }
     
-    private var moodSection: some View {
+    @ViewBuilder
+    private var stepContent: some View {
+        switch currentStep {
+        case 0:
+            moodStep
+            
+        case 1:
+            metricsStep
+            
+        case 2:
+            reflectionStep
+            
+        default:
+            EmptyView()
+        }
+    }
+    
+    private var moodStep: some View {
         VStack(
             alignment: .leading,
-            spacing: AppSpacing.standard
+            spacing: AppSpacing.section
         ) {
-            sectionTitle(
-                "How are you feeling?",
+            stepHeader(
+                title: "How do you feel today?",
+                subtitle: "Choose the mood that fits you best.",
                 systemImage: "face.smiling"
             )
             
@@ -169,10 +157,201 @@ struct CheckInView: View {
                 }
             }
         }
+    }
+    
+    private var metricsStep: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.section
+        ) {
+            stepHeader(
+                title: "How are you doing?",
+                subtitle: "Rate your energy and stress level.",
+                systemImage: "chart.bar.fill"
+            )
+            
+            ratingCard(
+                title: "Energy",
+                systemImage: "bolt.fill",
+                value: $viewModel.energyLevel,
+                tint: AppColors.accentYellow
+            )
+            
+            ratingCard(
+                title: "Stress",
+                systemImage: "waveform.path.ecg",
+                value: $viewModel.stressLevel,
+                tint: AppColors.accentPink
+            )
+        }
+    }
+    
+    private var reflectionStep: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.section
+        ) {
+            stepHeader(
+                title: "Take a moment to reflect",
+                subtitle: "Add a note or a few tags if you like.",
+                systemImage: "text.quote"
+            )
+            
+            reflectionPromptCard
+            
+            thoughtsCard
+            
+            tagsCard
+        }
+    }
+    
+    private var reflectionPromptCard: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
+            Label(
+                "Reflection Prompt",
+                systemImage: "sparkles"
+            )
+            .font(.headline)
+            .foregroundStyle(
+                AppColors.textPrimary
+            )
+            
+            Text(
+                viewModel.space.reflectionPrompt
+            )
+            .font(.body)
+            .foregroundStyle(
+                AppColors.textPrimary
+            )
+            .fixedSize(
+                horizontal: false,
+                vertical: true
+            )
+        }
+        .appCardStyle(
+            backgroundColor: accentColor.opacity(0.16),
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
+        )
+    }
+    
+    private var thoughtsCard: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
+            Label(
+                "Your Thoughts",
+                systemImage: "note.text"
+            )
+            .font(.headline)
+            .foregroundStyle(
+                AppColors.textPrimary
+            )
+            
+            TextField(
+                "Write a short note...",
+                text: $viewModel.note,
+                axis: .vertical
+            )
+            .font(.body)
+            .textFieldStyle(.plain)
+            .lineLimit(4...8)
+            .padding(12)
+            .background(
+                AppColors.surfaceSecondary
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.small,
+                    style: .continuous
+                )
+            )
+            .accessibilityIdentifier(
+                "checkInNoteTextField"
+            )
+        }
         .appCardStyle(
             backgroundColor: AppColors.surface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
+        )
+    }
+    
+    private var tagsCard: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
+            Label(
+                "Tags",
+                systemImage: "tag.fill"
+            )
+            .font(.headline)
+            .foregroundStyle(
+                AppColors.textPrimary
+            )
+            
+            TextField(
+                "Focus, Learning, Exercise",
+                text: $viewModel.tagsText
+            )
+            .font(.body)
+            .textFieldStyle(.plain)
+            .textInputAutocapitalization(.words)
+            .autocorrectionDisabled()
+            .padding(12)
+            .background(
+                AppColors.surfaceSecondary
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.small,
+                    style: .continuous
+                )
+            )
+        }
+        .appCardStyle(
+            backgroundColor: AppColors.surface,
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
+        )
+    }
+    
+    private func stepHeader(
+        title: String,
+        subtitle: String,
+        systemImage: String
+    ) -> some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.small
+        ) {
+            Label(
+                title,
+                systemImage: systemImage
+            )
+            .font(.system(
+                size: 28,
+                weight: .bold,
+                design: .rounded
+            ))
+            .foregroundStyle(
+                AppColors.textPrimary
+            )
+            
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+        }
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
         )
     }
     
@@ -209,7 +388,7 @@ struct CheckInView: View {
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
             .background(
                 isSelected
                 ? accentColor.opacity(0.38)
@@ -235,8 +414,11 @@ struct CheckInView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityElement(
+            children: .ignore
+        )
         .accessibilityLabel(
-            "\(mood.title), mood"
+            mood.title
         )
         .accessibilityValue(
             isSelected
@@ -244,25 +426,7 @@ struct CheckInView: View {
             : "Not selected"
         )
         .accessibilityHint(
-            "Double tap to select this mood."
-        )
-    }
-    
-    private var energySection: some View {
-        ratingCard(
-            title: "How is your energy?",
-            systemImage: "bolt.fill",
-            value: $viewModel.energyLevel,
-            tint: AppColors.accentYellow
-        )
-    }
-    
-    private var stressSection: some View {
-        ratingCard(
-            title: "How is your stress level?",
-            systemImage: "waveform.path.ecg",
-            value: $viewModel.stressLevel,
-            tint: AppColors.accentPink
+            "Selects this mood for your check-in."
         )
     }
     
@@ -277,9 +441,13 @@ struct CheckInView: View {
             spacing: AppSpacing.standard
         ) {
             HStack {
-                sectionTitle(
+                Label(
                     title,
                     systemImage: systemImage
+                )
+                .font(.headline)
+                .foregroundStyle(
+                    AppColors.textPrimary
                 )
                 
                 Spacer()
@@ -294,7 +462,10 @@ struct CheckInView: View {
             HStack(
                 spacing: AppSpacing.small
             ) {
-                ForEach(1...5, id: \.self) { level in
+                ForEach(
+                    1...5,
+                    id: \.self
+                ) { level in
                     Button {
                         value.wrappedValue = level
                     } label: {
@@ -307,7 +478,7 @@ struct CheckInView: View {
                             )
                             .frame(
                                 maxWidth: .infinity,
-                                minHeight: 42
+                                minHeight: 46
                             )
                             .background(
                                 value.wrappedValue >= level
@@ -333,119 +504,58 @@ struct CheckInView: View {
         )
     }
     
-    private var reflectionSection: some View {
-        VStack(
-            alignment: .leading,
+    private var navigationControls: some View {
+        HStack(
             spacing: AppSpacing.standard
         ) {
-            sectionTitle(
-                "Reflection Prompt",
-                systemImage: "sparkles"
-            )
+            if currentStep > 0 {
+                Button("Back") {
+                    withAnimation(.easeInOut) {
+                        currentStep -= 1
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(AppColors.textPrimary)
+            }
             
-            Text(viewModel.space.reflectionPrompt)
-                .font(.body)
-                .foregroundStyle(
-                    AppColors.textPrimary
+            Button {
+                if isLastStep {
+                    saveCheckIn()
+                } else {
+                    withAnimation(.easeInOut) {
+                        currentStep += 1
+                    }
+                }
+            } label: {
+                Text(
+                    isLastStep
+                    ? "Save Check-In"
+                    : "Continue"
                 )
-                .fixedSize(
-                    horizontal: false,
-                    vertical: true
-                )
-        }
-        .appCardStyle(
-            backgroundColor: accentColor.opacity(0.16),
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
-    
-    private var thoughtsSection: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            sectionTitle(
-                "Your Thoughts",
-                systemImage: "note.text"
-            )
-            
-            TextField(
-                "Write a short note...",
-                text: $viewModel.note,
-                axis: .vertical
-            )
-            .font(.body)
-            .textFieldStyle(.plain)
-            .lineLimit(4...8)
-            .padding(12)
-            .background(
-                AppColors.surfaceSecondary
-            )
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
+            }
+            .buttonStyle(
+                PrimaryButtonStyle(
+                    backgroundColor: accentColor
                 )
             )
+            .disabled(!canContinue)
+            .opacity(canContinue ? 1.0 : 0.5)
             .accessibilityIdentifier(
-                "checkInNoteTextField"
+                isLastStep
+                ? "saveCheckInButton"
+                : "continueCheckInButton.step\(currentStep + 1)"
             )
         }
-        .appCardStyle(
-            backgroundColor: AppColors.surface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
-    
-    private var tagsSection: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            sectionTitle(
-                "Tags",
-                systemImage: "tag.fill"
-            )
-            
-            TextField(
-                "Focus, Learning, Exercise",
-                text: $viewModel.tagsText
-            )
-            .font(.body)
-            .textFieldStyle(.plain)
-            .textInputAutocapitalization(.words)
-            .autocorrectionDisabled()
-            .padding(12)
-            .background(
-                AppColors.surfaceSecondary
-            )
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
+        .padding(.horizontal, AppSpacing.screenHorizontal)
+        .padding(.vertical, AppSpacing.standard)
+        .background(
+            AppColors.canvas
+                .shadow(
+                    color: Color.black.opacity(0.06),
+                    radius: 8,
+                    x: 0,
+                    y: -3
                 )
-            )
-        }
-        .appCardStyle(
-            backgroundColor: AppColors.surface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
-    
-    private func sectionTitle(
-        _ title: String,
-        systemImage: String
-    ) -> some View {
-        Label(
-            title,
-            systemImage: systemImage
-        )
-        .font(.headline)
-        .foregroundStyle(
-            AppColors.textPrimary
         )
     }
     
@@ -454,9 +564,28 @@ struct CheckInView: View {
         onSave(checkIn)
         dismiss()
     }
+    
+    private var canContinue: Bool {
+        switch currentStep {
+        case 0:
+            return true
+            
+        case 1:
+            return viewModel.energyLevel >= 1 &&
+                viewModel.energyLevel <= 5 &&
+                viewModel.stressLevel >= 1 &&
+                viewModel.stressLevel <= 5
+            
+        case 2:
+            return true
+            
+        default:
+            return false
+        }
+    }
 }
 
-#Preview("New Check-In") {
+#Preview("New Check-In - Step 1") {
     CheckInView(
         space: .personal
     ) { checkIn in

@@ -9,7 +9,9 @@ import Foundation
 import Combine
 import UserNotifications
 
-final class NotificationService {
+final class NotificationService:
+    NSObject,
+    UNUserNotificationCenterDelegate {
     
     private let notificationCenter: UNUserNotificationCenter
     
@@ -24,6 +26,10 @@ final class NotificationService {
             .current()
     ) {
         self.notificationCenter = notificationCenter
+        
+        super.init()
+        
+        self.notificationCenter.delegate = self
     }
     
     func requestAuthorization() -> AnyPublisher<Bool, Never> {
@@ -49,6 +55,7 @@ final class NotificationService {
             identifier: personalReminderIdentifier,
             title: "Personal Check-In",
             body: "Take a moment to reflect on your personal day.",
+            reminderType: "personal",
             hour: hour,
             minute: minute
         )
@@ -62,6 +69,7 @@ final class NotificationService {
             identifier: professionalReminderIdentifier,
             title: "Professional Check-In",
             body: "Reflect on your professional day.",
+            reminderType: "professional",
             hour: hour,
             minute: minute
         )
@@ -87,6 +95,7 @@ final class NotificationService {
         identifier: String,
         title: String,
         body: String,
+        reminderType: String,
         hour: Int,
         minute: Int
     ) -> AnyPublisher<Void, Error> {
@@ -95,6 +104,9 @@ final class NotificationService {
             content.title = title
             content.body = body
             content.sound = .default
+            content.userInfo = [
+                "reminderType": reminderType
+            ]
             
             var dateComponents = DateComponents()
             dateComponents.hour = hour
@@ -127,4 +139,65 @@ final class NotificationService {
         }
         .eraseToAnyPublisher()
     }
+    
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler:
+            @escaping (
+                UNNotificationPresentationOptions
+            ) -> Void
+    ) {
+        completionHandler([
+            .banner,
+            .sound,
+            .badge
+        ])
+    }
+    
+    func notificationPermissionStatus()
+        -> AnyPublisher<UNAuthorizationStatus, Never> {
+        
+        Future { [notificationCenter] promise in
+            notificationCenter.getNotificationSettings { settings in
+                promise(
+                    .success(
+                        settings.authorizationStatus
+                    )
+                )
+            }
+        }
+        .eraseToAnyPublisher()
+    }
+    
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler:
+            @escaping () -> Void
+    ) {
+        let userInfo =
+            response.notification.request.content.userInfo
+        
+        guard let reminderType =
+            userInfo["reminderType"] as? String
+        else {
+            completionHandler()
+            return
+        }
+        
+        NotificationCenter.default.post(
+            name: .checkInReminderSelected,
+            object: reminderType
+        )
+        
+        completionHandler()
+    }
+}
+
+extension Notification.Name {
+    static let checkInReminderSelected =
+        Notification.Name(
+            "checkInReminderSelected"
+        )
 }

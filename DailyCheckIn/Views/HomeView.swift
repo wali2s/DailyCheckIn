@@ -10,7 +10,7 @@ import SwiftUI
 struct HomeView: View {
     
     @ObservedObject var viewModel: HomeViewModel
-    
+    @ObservedObject var settingsViewModel: SettingsViewModel
     @State private var selectedSpace: JournalSpace?
     
     var body: some View {
@@ -51,6 +51,28 @@ struct HomeView: View {
                 viewModel.addCheckIn(newCheckIn)
             }
         }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .checkInReminderSelected
+            )
+        ) { notification in
+            guard let reminderType =
+                notification.object as? String
+            else {
+                return
+            }
+            
+            switch reminderType {
+            case "personal":
+                selectedSpace = .personal
+                
+            case "professional":
+                selectedSpace = .professional
+                
+            default:
+                break
+            }
+        }
     }
     
     private var headerSection: some View {
@@ -66,7 +88,7 @@ struct HomeView: View {
                     alignment: .leading,
                     spacing: 4
                 ) {
-                    Text("Hi, Wahid!")
+                    Text("Hi, \(settingsViewModel.displayName)!")
                         .font(.system(
                             size: 34,
                             weight: .bold,
@@ -501,7 +523,8 @@ private struct SpaceCheckInCard: View {
             viewModel: HomeViewModel(
                 storageService:
                     PreviewCheckInStorageService()
-            )
+            ),
+            settingsViewModel: SettingsViewModel()
         )
     }
 }

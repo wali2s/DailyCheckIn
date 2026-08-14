@@ -31,6 +31,7 @@ struct StatisticsView: View {
             } else {
                 moodTrendSection
                 metricsSection
+                summarySection
                 insightsSection
             }
         }
@@ -311,6 +312,67 @@ struct StatisticsView: View {
             }
             .padding(.vertical, 6)
         }
+    }
+    
+    private var summarySection: some View {
+        Section("Check-Ins") {
+            HStack(
+                spacing: AppSpacing.standard
+            ) {
+                ZStack {
+                    RoundedRectangle(
+                        cornerRadius: AppCornerRadius.small,
+                        style: .continuous
+                    )
+                    .fill(
+                        AppColors.accentBlue.opacity(0.22)
+                    )
+                    .frame(
+                        width: 48,
+                        height: 48
+                    )
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(
+                            AppColors.accentBlue
+                        )
+                }
+                
+                VStack(
+                    alignment: .leading,
+                    spacing: 4
+                ) {
+                    Text("Total Check-Ins")
+                        .font(.headline)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                    
+                    Text("In selected period")
+                        .font(.subheadline)
+                        .foregroundStyle(
+                            AppColors.textSecondary
+                        )
+                }
+                
+                Spacer()
+                
+                Text(
+                    "\(viewModel.totalCheckIns)"
+                )
+                .font(.system(
+                    size: 30,
+                    weight: .bold,
+                    design: .rounded
+                ))
+                .foregroundStyle(
+                    AppColors.textPrimary
+                )
+            }
+            .padding(.vertical, 6)
+        }
+        .listRowBackground(AppColors.surface)
     }
     private var insightsSection: some View {
         Section("Insights") {
