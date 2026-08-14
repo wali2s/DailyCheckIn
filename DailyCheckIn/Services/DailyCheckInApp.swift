@@ -12,6 +12,7 @@ struct DailyCheckInApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                
         }
     }
 }

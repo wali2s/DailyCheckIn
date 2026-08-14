@@ -277,6 +277,12 @@ final class SettingsViewModel: ObservableObject {
             from: components
         ) ?? Date()
     }
+    
+    func setStatusMessage(
+        _ message: String
+    ) {
+        statusMessage = message
+    }
 }
 
 enum SettingsError: Error {

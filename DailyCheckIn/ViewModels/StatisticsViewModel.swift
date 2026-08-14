@@ -44,13 +44,15 @@ enum StatisticsPeriod: String, CaseIterable, Identifiable {
 final class StatisticsViewModel: ObservableObject {
     
     @Published private(set) var checkIns: [CheckIn] = []
-    @Published var selectedSpace: JournalSpace?
+    @Published var selectedSpace: JournalSpace = .personal
     @Published var selectedPeriod: StatisticsPeriod = .allTime
     
     private var cancellables = Set<AnyCancellable>()
     private let calendar = Calendar.current
     
-    init(homeViewModel: HomeViewModel) {
+    init(
+        homeViewModel: HomeViewModel
+    ) {
         self.checkIns = homeViewModel.checkIns
         
         homeViewModel.$checkIns
@@ -58,56 +60,78 @@ final class StatisticsViewModel: ObservableObject {
             .sink { [weak self] checkIns in
                 self?.checkIns = checkIns
             }
-            .store(in: &cancellables)
+            .store(
+                in: &cancellables
+            )
     }
     
     var filteredCheckIns: [CheckIn] {
         let periodFilteredCheckIns: [CheckIn]
         
-        guard let numberOfDays = selectedPeriod.numberOfDays else {
-            periodFilteredCheckIns = checkIns
-            return filterBySpace(
-                periodFilteredCheckIns
+        if let numberOfDays = selectedPeriod.numberOfDays {
+            let today = calendar.startOfDay(
+                for: Date()
             )
-        }
-        
-        let today = calendar.startOfDay(
-            for: Date()
-        )
-        
-        guard let startDate = calendar.date(
-            byAdding: .day,
-            value: -(numberOfDays - 1),
-            to: today
-        ) else {
-            return []
-        }
-        
-        periodFilteredCheckIns = checkIns.filter {
-            $0.date >= startDate &&
-            $0.date <= Date()
+            
+            guard let startDate = calendar.date(
+                byAdding: .day,
+                value: -(numberOfDays - 1),
+                to: today
+            ) else {
+                return []
+            }
+            
+            periodFilteredCheckIns = checkIns.filter {
+                $0.date >= startDate &&
+                $0.date <= Date()
+            }
+        } else {
+            periodFilteredCheckIns = checkIns
         }
         
         return filterBySpace(
             periodFilteredCheckIns
         )
+        .sorted {
+            $0.date < $1.date
+        }
     }
     
-    var totalCheckIns: Int { checkIns.count }
+    var totalCheckIns: Int {
+        filteredCheckIns.count
+    }
     
     var averageMood: Double {
-        average(filteredCheckIns.map {$0.mood.score})
+        average(
+            filteredCheckIns.map {
+                $0.mood.score
+            }
+        )
     }
     
     var averageEnergy: Double {
-        average(filteredCheckIns
-            .map {Double($0.energyLevel)}
+        average(
+            filteredCheckIns.map {
+                Double($0.energyLevel)
+            }
         )
     }
     
     var averageStress: Double {
-        average(filteredCheckIns
-            .map {Double($0.stressLevel)}
+        average(
+            filteredCheckIns.map {
+                Double($0.stressLevel)
+            }
+        )
+    }
+    
+    var averageMoodText: String {
+        guard !filteredCheckIns.isEmpty else {
+            return "No mood data yet"
+        }
+        
+        return formattedAverage(
+            averageMood
         )
     }
     
@@ -165,26 +189,34 @@ final class StatisticsViewModel: ObservableObject {
         return generatedInsights
     }
     
-    private func average(_ values: [Double]) -> Double {
-        guard !values.isEmpty else { return 0 }
+    func formattedAverage(
+        _ value: Double
+    ) -> String {
+        guard !filteredCheckIns.isEmpty else {
+            return "-"
+        }
         
-        return values.reduce(0, +) / Double(values.count)
+        return String(
+            format: "%.1f / 5",
+            value
+        )
     }
     
-     func formattedAverage(_ value: Double) -> String {
-        guard totalCheckIns > 0 else { return "-" }
+    private func average(
+        _ values: [Double]
+    ) -> Double {
+        guard !values.isEmpty else {
+            return 0
+        }
         
-        return String(format: "%.1f/5", value)
+        return values.reduce(0, +)
+            / Double(values.count)
     }
     
     private func filterBySpace(
         _ checkIns: [CheckIn]
     ) -> [CheckIn] {
-        guard let selectedSpace else {
-            return checkIns
-        }
-        
-        return checkIns.filter {
+        checkIns.filter {
             $0.space == selectedSpace
         }
     }

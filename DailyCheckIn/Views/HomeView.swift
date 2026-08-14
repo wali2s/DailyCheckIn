@@ -20,18 +20,6 @@ struct HomeView: View {
                 spacing: AppSpacing.section
             ) {
                 headerSection
-                
-                DailyProgressCard(
-                    completedSpaces: viewModel.completedSpacesToday,
-                    totalSpaces: viewModel.totalSpaces,
-                    progress: viewModel.dailyCompletionProgress,
-                    message: viewModel.dailyCompletionMessage
-                )
-                
-                StreakCard(
-                    streak: viewModel.currentStreak
-                )
-                
                 spacesSection
             }
             .padding(.horizontal, AppSpacing.screenHorizontal)
@@ -68,30 +56,78 @@ struct HomeView: View {
     private var headerSection: some View {
         VStack(
             alignment: .leading,
-            spacing: AppSpacing.small
+            spacing: AppSpacing.standard
         ) {
-            Text("Hello")
-                .font(.system(
-                    size: 42,
-                    weight: .bold,
-                    design: .rounded
-                ))
-                .foregroundStyle(AppColors.textPrimary)
-            
-            Text("How are you feeling today?")
-                .font(.title3)
-                .fontWeight(.medium)
-                .foregroundStyle(AppColors.textPrimary)
+            HStack(
+                alignment: .center,
+                spacing: AppSpacing.standard
+            ) {
+                VStack(
+                    alignment: .leading,
+                    spacing: 4
+                ) {
+                    Text("Hi, Wahid!")
+                        .font(.system(
+                            size: 34,
+                            weight: .bold,
+                            design: .rounded
+                        ))
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                    
+                    Text("How are you feeling today?")
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                }
+                
+                Spacer()
+                
+                profileButton
+            }
             
             Text(
                 "Take a moment to check in with yourself."
             )
             .font(.subheadline)
-            .foregroundStyle(AppColors.textSecondary)
+            .foregroundStyle(
+                AppColors.textSecondary
+            )
         }
         .frame(
             maxWidth: .infinity,
             alignment: .leading
+        )
+    }
+    
+    private var profileButton: some View {
+        Button {
+            // Wird im nächsten Schritt mit Profile/Settings verbunden.
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(
+                        AppColors.accentYellow.opacity(0.35)
+                    )
+                    .frame(
+                        width: 52,
+                        height: 52
+                    )
+                
+                Image(systemName: "person.fill")
+                    .font(.title3)
+                    .foregroundStyle(
+                        AppColors.textPrimary
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Profile")
+        .accessibilityHint(
+            "Opens your profile settings."
         )
     }
     

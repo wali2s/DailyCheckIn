@@ -188,7 +188,12 @@ struct CheckInView: View {
                 spacing: AppSpacing.small
             ) {
                 Image(systemName: mood.iconName)
-                        .foregroundStyle(mood.iconColor)
+                    .font(.headline)
+                    .foregroundStyle(
+                        isSelected
+                        ? .black
+                        : mood.iconColor
+                    )
                 
                 Text(mood.title)
                     .font(.subheadline)
@@ -230,6 +235,17 @@ struct CheckInView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(
+            "\(mood.title), mood"
+        )
+        .accessibilityValue(
+            isSelected
+            ? "Selected"
+            : "Not selected"
+        )
+        .accessibilityHint(
+            "Double tap to select this mood."
+        )
     }
     
     private var energySection: some View {

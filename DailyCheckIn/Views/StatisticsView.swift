@@ -12,147 +12,317 @@ struct StatisticsView: View {
     
     @StateObject private var viewModel: StatisticsViewModel
     
-    init (homeViewModel: HomeViewModel) {
-        _viewModel = StateObject( wrappedValue: StatisticsViewModel(homeViewModel: homeViewModel))
+    init(
+        homeViewModel: HomeViewModel
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: StatisticsViewModel(
+                homeViewModel: homeViewModel
+            )
+        )
     }
+    
     var body: some View {
         List {
-            Section {
-                Picker(
-                    "Space",
-                    selection: $viewModel.selectedSpace
+            filterSection
+            
+            if viewModel.filteredCheckIns.isEmpty {
+                emptyStatisticsSection
+            } else {
+                moodTrendSection
+                metricsSection
+                insightsSection
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(AppColors.canvas)
+        .navigationTitle("Statistics")
+        .navigationBarTitleDisplayMode(.large)
+    }
+    
+    private var filterSection: some View {
+        Section {
+            Picker(
+                "Space",
+                selection: $viewModel.selectedSpace
+            ) {
+                ForEach(JournalSpace.allCases) { space in
+                    Text(space.title)
+                        .tag(space)
+                }
+            }
+            .pickerStyle(.segmented)
+            .listRowInsets(
+                EdgeInsets(
+                    top: 12,
+                    leading: 16,
+                    bottom: 12,
+                    trailing: 16
+                )
+            )
+            
+            Picker(
+                "Period",
+                selection: $viewModel.selectedPeriod
+            ) {
+                ForEach(
+                    StatisticsPeriod.allCases
+                ) { period in
+                    Text(period.title)
+                        .tag(period)
+                }
+            }.pickerStyle(.menu)
+            .listRowInsets(
+                EdgeInsets(
+                    top: 8,
+                    leading: 16,
+                    bottom: 8,
+                    trailing: 16
+                )
+            )
+        }
+        .listRowBackground(AppColors.surface)
+    }
+    
+    private var emptyStatisticsSection: some View {
+        Section {
+            ContentUnavailableView(
+                "No Statistics Yet",
+                systemImage: "chart.bar.xaxis",
+                description: Text(
+                    "Create a check-in to see your statistics."
+                )
+            )
+            .frame(
+                maxWidth: .infinity,
+                minHeight: 240
+            )
+            .listRowInsets(
+                EdgeInsets(
+                    top: 24,
+                    leading: 0,
+                    bottom: 24,
+                    trailing: 0
+                )
+            )
+        }
+        .listRowBackground(Color.clear)
+    }
+    
+    private var moodTrendSection: some View {
+        Section("Mood Trend") {
+            moodTrendChart
+                .frame(
+                    minHeight: 220
+                )
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 16,
+                        leading: 8,
+                        bottom: 16,
+                        trailing: 8
+                    )
+                )
+        }
+        .listRowBackground(AppColors.surface)
+    }
+    
+    private var moodTrendChart: some View {
+        Chart {
+            ForEach(
+                viewModel.filteredCheckIns.sorted {
+                    $0.date < $1.date
+                }
+            ) { checkIn in
+                BarMark(
+                    x: .value(
+                        "Date",
+                        checkIn.date,
+                        unit: .day
+                    ),
+                    y: .value(
+                        "Mood",
+                        checkIn.mood.score
+                    )
+                )
+                .foregroundStyle(
+                    checkIn.mood.iconColor
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: 10,
+                        style: .continuous
+                    )
+                )
+                .annotation(
+                    position: .top,
+                    alignment: .center
                 ) {
-                    Text("All")
-                        .tag(nil as JournalSpace?)
-                    
-                    ForEach(JournalSpace.allCases) { space in
-                        Text(space.title)
-                            .tag(Optional(space))
-                    }
+                    Image(
+                        systemName: checkIn.mood.iconName
+                    )
+                    .font(.caption)
+                    .foregroundStyle(
+                        checkIn.mood.iconColor
+                    )
+                    .accessibilityHidden(true)
                 }
-                .pickerStyle(.segmented)
+            }
+        }
+        .frame(
+            height: 240
+        )
+        .chartYScale(
+            domain: 0...5
+        )
+        .chartYAxis {
+            AxisMarks(
+                values: [1, 2, 3, 4, 5]
+            ) { value in
+                AxisGridLine()
+                    .foregroundStyle(
+                        AppColors.textSecondary.opacity(0.12)
+                    )
                 
-                Picker(
-                    "Period",
-                    selection: $viewModel.selectedPeriod
+                AxisValueLabel()
+                    .foregroundStyle(
+                        AppColors.textSecondary
+                    )
+            }
+        }
+        .chartXAxis {
+            AxisMarks(
+                values: .stride(
+                    by: .day
+                )
+            ) { value in
+                AxisValueLabel(
+                    format: .dateTime.weekday(
+                        .abbreviated
+                    )
+                )
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+            }
+        }
+        .chartPlotStyle { plotArea in
+            plotArea
+                .background(
+                    AppColors.surface.opacity(0.1)
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: AppCornerRadius.standard,
+                        style: .continuous
+                    )
+                )
+        }
+        .accessibilityElement(
+            children: .ignore
+        )
+        .accessibilityLabel(
+            "Mood trend"
+        )
+        .accessibilityValue(
+            moodChartAccessibilityValue
+        )
+    }
+    
+    private var metricsSection: some View {
+        Section("Daily Averages") {
+            MetricSummaryRow(
+                title: "Average Mood",
+                value: viewModel.formattedAverage(
+                    viewModel.averageMood
+                ),
+                progress: viewModel.averageMood,
+                tint: AppColors.accentMint,
+                systemImage: "chart.line.uptrend.xyaxis"
+            )
+            
+            MetricSummaryRow(
+                title: "Average Energy",
+                value: viewModel.formattedAverage(
+                    viewModel.averageEnergy
+                ),
+                progress: viewModel.averageEnergy,
+                tint: AppColors.accentYellow,
+                systemImage: "bolt.fill"
+            )
+            
+            MetricSummaryRow(
+                title: "Average Stress",
+                value: viewModel.formattedAverage(
+                    viewModel.averageStress
+                ),
+                progress: viewModel.averageStress,
+                tint: AppColors.accentPink,
+                systemImage: "waveform.path.ecg"
+            )
+        }
+        .listRowBackground(AppColors.surface)
+    }
+    
+    private struct MetricSummaryRow: View {
+        
+        let title: String
+        let value: String
+        let progress: Double
+        let tint: Color
+        let systemImage: String
+        
+        var body: some View {
+            VStack(
+                alignment: .leading,
+                spacing: 8
+            ) {
+                HStack(
+                    spacing: AppSpacing.small
                 ) {
-                    ForEach(
-                        StatisticsPeriod.allCases
-                    ) { period in
-                        Text(period.title)
-                            .tag(period)
-                    }
-                }
-            }
-            
-            if !viewModel.filteredCheckIns.isEmpty {
-                Section("Mood Trend") {
-                    Chart {
-                        ForEach(
-                            viewModel.filteredCheckIns.sorted {
-                                $0.date < $1.date
-                            }
-                        ) { checkIn in
-                            LineMark(
-                                x: .value(
-                                    "Date",
-                                    checkIn.date
-                                ),
-                                y: .value(
-                                    "Mood",
-                                    checkIn.mood.rawValue
-                                ),
-                                series: .value(
-                                    "Space",
-                                    checkIn.space.title
-                                )
-                            )
-                            .foregroundStyle(
-                                by: .value(
-                                    "Space",
-                                    checkIn.space.title
-                                )
-                            )
-                            
-                            PointMark(
-                                x: .value(
-                                    "Date",
-                                    checkIn.date
-                                ),
-                                y: .value(
-                                    "Mood",
-                                    checkIn.mood.rawValue
-                                )
-                            )
-                            .foregroundStyle(
-                                by: .value(
-                                    "Space",
-                                    checkIn.space.title
-                                )
-                            )
-                        }
-                        
-                        RuleMark(
-                            y: .value(
-                                "Neutral",
-                                3
-                            )
-                        )
-                        .foregroundStyle(.gray)
-                        .lineStyle(
-                            StrokeStyle(
-                                dash: [5]
-                            )
-                        )
-                    }
-                    .frame(height: 220)
-                    .chartYScale(
-                        domain: 1...5
-                    )
-                    .chartYAxis {
-                        AxisMarks(
-                            values: [1, 2, 3, 4, 5]
-                        )
-                    }
-                    .chartLegend(
-                        position: .bottom
-                    )
-                    .accessibilityLabel(
-                        "Mood trend chart"
-                    )
-                }
-            }
-            
-            Section("Overview") {
-                StatisticsRow(title: "Total Check-Ins", value: "\(viewModel.totalCheckIns)", systemImage: "checkmark.circle.fill")
-                
-                StatisticsRow(
-                    title: "Average Mood",
-                    value: viewModel.formattedAverage(viewModel      .averageMood),
+                    Image(systemName: systemImage)
+                        .foregroundStyle(tint)
+                        .frame(width: 22)
                     
-                    systemImage: "face.smiling")
-                
-                StatisticsRow(
-                    title: "Average Energy",
-                    value: viewModel.formattedAverage(viewModel.averageEnergy),
-                    systemImage: "bolt.fill")
-                
-                StatisticsRow(
-                    title: "Average Stress",
-                    value: viewModel.formattedAverage(viewModel.averageStress),
-                    systemImage: "waveform.path.ecg")
-                
-                if viewModel.totalCheckIns == 0 {
-                    Section {
-                        Text("No check-ins to see your statistics.")
-                            .foregroundStyle(.secondary)
-                            
-                    }
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                    
+                    Spacer()
+                    
+                    Text(value)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
                 }
+                
+                ProgressView(
+                    value: progress,
+                    total: 5
+                )
+                .tint(tint)
+                .accessibilityLabel(title)
+                .accessibilityValue(value)
             }
-            .navigationTitle("Statistics")
-            
-            Section("Insights") {
+            .padding(.vertical, 6)
+        }
+    }
+    private var insightsSection: some View {
+        Section("Insights") {
+            if viewModel.insights.isEmpty {
+                Text(
+                    "More check-ins are needed to generate insights."
+                )
+                .font(.subheadline)
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+            } else {
                 ForEach(
                     viewModel.insights,
                     id: \.self
@@ -161,44 +331,80 @@ struct StatisticsView: View {
                         insight,
                         systemImage: "lightbulb.fill"
                     )
+                    .foregroundStyle(
+                        AppColors.textPrimary
+                    )
                 }
             }
         }
+        .listRowBackground(AppColors.surface)
+    }
+    
+    private var moodChartAccessibilityValue: String {
+        guard let firstCheckIn =
+            viewModel.filteredCheckIns.first
+        else {
+            return "No mood data available"
+        }
+        
+        let firstMood = firstCheckIn.mood.title
+        
+        guard let lastCheckIn =
+            viewModel.filteredCheckIns.last
+        else {
+            return "Mood was \(firstMood)"
+        }
+        
+        let lastMood = lastCheckIn.mood.title
+        
+        if firstMood == lastMood {
+            return "Mood remained \(lastMood)"
+        }
+        
+        return "Mood changed from \(firstMood) to \(lastMood)"
     }
 }
 
-private struct StatisticsRow: View {
-    let title: String
-    let value: String
-    let systemImage: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .foregroundStyle(.blue)
-                .frame(width:24)
-            
-            Text(title)
-            
-            Spacer()
-            
-            Text(value)
-                .fontWeight(.semibold)
-        }
+
+#Preview("Statistics - Light Mode") {
+    NavigationStack {
+        StatisticsView(
+            homeViewModel: HomeViewModel(
+                storageService:
+                    StatisticsPreviewStorageService()
+            )
+        )
     }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Statistics - Dark Mode") {
+    NavigationStack {
+        StatisticsView(
+            homeViewModel: HomeViewModel(
+                storageService:
+                    StatisticsPreviewStorageService()
+            )
+        )
+    }
+    .preferredColorScheme(.dark)
 }
 
 #Preview("Statistics - Sample Data") {
     NavigationStack {
         StatisticsView(
             homeViewModel: HomeViewModel(
-                storageService: StatisticsPreviewStorageService()
+                storageService:
+                    StatisticsPreviewStorageService()
             )
         )
     }
 }
 
-final class StatisticsPreviewStorageService: CheckInStorageService {
+final class StatisticsPreviewStorageService:
+    CheckInStorageService {
+    
+    
     
     private var previewCheckIns: [CheckIn] = [
         CheckIn(
@@ -208,8 +414,12 @@ final class StatisticsPreviewStorageService: CheckInStorageService {
             energyLevel: 4,
             stressLevel: 2,
             note: "Had a calm and productive day.",
-            tags: ["Calm", "Productive"]
+            tags: [
+                "Calm",
+                "Productive"
+            ]
         ),
+        
         CheckIn(
             date: Date().addingTimeInterval(-86_400),
             space: .personal,
@@ -217,8 +427,11 @@ final class StatisticsPreviewStorageService: CheckInStorageService {
             energyLevel: 5,
             stressLevel: 1,
             note: "Spent time with my family.",
-            tags: ["Family"]
+            tags: [
+                "Family"
+            ]
         ),
+        
         CheckIn(
             date: Date(),
             space: .professional,
@@ -226,7 +439,39 @@ final class StatisticsPreviewStorageService: CheckInStorageService {
             energyLevel: 3,
             stressLevel: 4,
             note: "Worked on the Daily Check-In app.",
-            tags: ["Development"]
+            tags: [
+                "Development"
+            ]
+        ),
+        
+        CheckIn(
+            date: Date().addingTimeInterval(-2 * 86_400),
+            space: .professional,
+            mood: .happy,
+            energyLevel: 5,
+            stressLevel: 1,
+            note: "A very productive day.",
+            tags: ["Focus"]
+        ),
+
+        CheckIn(
+            date: Date().addingTimeInterval(-4 * 86_400),
+            space: .personal,
+            mood: .sad,
+            energyLevel: 2,
+            stressLevel: 4,
+            note: "Needed more time to rest.",
+            tags: ["Rest"]
+        ),
+
+        CheckIn(
+            date: Date().addingTimeInterval(-6 * 86_400),
+            space: .professional,
+            mood: .calm,
+            energyLevel: 4,
+            stressLevel: 2,
+            note: "A balanced workday.",
+            tags: ["Balance"]
         )
     ]
     
@@ -234,7 +479,9 @@ final class StatisticsPreviewStorageService: CheckInStorageService {
         previewCheckIns
     }
     
-    func saveCheckIns(_ checkIns: [CheckIn]) {
+    func saveCheckIns(
+        _ checkIns: [CheckIn]
+    ) {
         previewCheckIns = checkIns
     }
 }
