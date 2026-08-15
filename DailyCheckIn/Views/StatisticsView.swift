@@ -325,18 +325,20 @@ struct StatisticsView: View {
                         style: .continuous
                     )
                     .fill(
-                        AppColors.accentBlue.opacity(0.22)
+                        AppColors.accentMint.opacity(0.22)
                     )
                     .frame(
                         width: 48,
                         height: 48
                     )
                     
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(
-                            AppColors.accentBlue
-                        )
+                    Image(
+                        systemName: "checkmark.circle.fill"
+                    )
+                    .font(.title3)
+                    .foregroundStyle(
+                        AppColors.accentMint
+                    )
                 }
                 
                 VStack(
@@ -371,9 +373,17 @@ struct StatisticsView: View {
                 )
             }
             .padding(.vertical, 6)
+            .accessibilityElement(
+                children: .combine
+            )
+            .accessibilityLabel("Total Check-Ins")
+            .accessibilityValue(
+                "\(viewModel.totalCheckIns)"
+            )
         }
         .listRowBackground(AppColors.surface)
     }
+    
     private var insightsSection: some View {
         Section("Insights") {
             if viewModel.insights.isEmpty {
