@@ -46,6 +46,7 @@ final class StatisticsViewModel: ObservableObject {
     @Published private(set) var checkIns: [CheckIn] = []
     @Published var selectedSpace: JournalSpace = .personal
     @Published var selectedPeriod: StatisticsPeriod = .allTime
+    @Published private(set) var totalCheckIns: Int = 0
     
     private var cancellables = Set<AnyCancellable>()
     private let calendar = Calendar.current
@@ -54,11 +55,31 @@ final class StatisticsViewModel: ObservableObject {
         homeViewModel: HomeViewModel
     ) {
         self.checkIns = homeViewModel.checkIns
-        
+        self.totalCheckIns = filteredCheckIns.count
+
         homeViewModel.$checkIns
             .receive(on: RunLoop.main)
             .sink { [weak self] checkIns in
                 self?.checkIns = checkIns
+                self?.totalCheckIns = self?.filteredCheckIns.count ?? 0
+            }
+            .store(
+                in: &cancellables
+            )
+
+        $selectedSpace
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.totalCheckIns = self?.filteredCheckIns.count ?? 0
+            }
+            .store(
+                in: &cancellables
+            )
+
+        $selectedPeriod
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.totalCheckIns = self?.filteredCheckIns.count ?? 0
             }
             .store(
                 in: &cancellables
@@ -95,10 +116,6 @@ final class StatisticsViewModel: ObservableObject {
         .sorted {
             $0.date < $1.date
         }
-    }
-    
-    var totalCheckIns: Int {
-        filteredCheckIns.count
     }
     
     var averageMood: Double {

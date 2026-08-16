@@ -8,37 +8,45 @@
 import SwiftUI
 
 struct PrimaryButtonStyle: ButtonStyle {
-    
     let backgroundColor: Color
-    
+
     init(
         backgroundColor: Color = AppColors.accentBlue
     ) {
         self.backgroundColor = backgroundColor
     }
-    
+
     func makeBody(
         configuration: Configuration
     ) -> some View {
         configuration.label
-            .font(.headline)
-            .foregroundStyle(.black)
+            .font(.system(
+                size: 17,
+                weight: .semibold,
+                design: .rounded
+            ))
+            .foregroundStyle(.white)
             .frame(
                 maxWidth: .infinity,
-                minHeight: 50
+                minHeight: 54
             )
             .background(backgroundColor)
-            .clipShape(
+            .clipShape(Capsule())
+            .overlay {
                 Capsule()
-            )
+                    .stroke(
+                        Color.black.opacity(0.04),
+                        lineWidth: 1
+                    )
+            }
             .opacity(
-                configuration.isPressed ? 0.82 : 1.0
+                configuration.isPressed ? 0.88 : 1.0
             )
             .scaleEffect(
-                configuration.isPressed ? 0.98 : 1.0
+                configuration.isPressed ? 0.985 : 1.0
             )
             .animation(
-                .easeOut(duration: 0.15),
+                .easeOut(duration: 0.16),
                 value: configuration.isPressed
             )
     }

@@ -64,7 +64,7 @@ struct SettingsView: View {
                     Text("Deutsch")
                         .tag("de")
                 }
-                .pickerStyle(.menu)
+                .pickerStyle(.automatic)
             }
             
             reminderSection(
@@ -128,7 +128,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         .scrollContentBackground(.hidden)
-        .background(AppColors.canvas)
+        .background(AppColors.warmCanvas)
         .confirmationDialog(
             "Delete All Check-Ins",
             isPresented: $isShowingDeleteConfirmation,

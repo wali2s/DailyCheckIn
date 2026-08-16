@@ -26,7 +26,7 @@ struct HomeView: View {
             .padding(.vertical, AppSpacing.standard)
         }
         .scrollIndicators(.hidden)
-        .background(AppColors.canvas)
+        .background(AppColors.warmCanvas)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -241,7 +241,7 @@ private struct DailyProgressCard: View {
                 )
         }
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.warmSurface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )
@@ -310,7 +310,7 @@ private struct StreakCard: View {
             Spacer()
         }
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.warmSurface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )
@@ -325,7 +325,7 @@ private struct SpaceCheckInCard: View {
     let onCheckIn: () -> Void
     
     private var cardBackgroundColor: Color {
-        AppColors.surface
+        AppColors.warmSurface
     }
     
     private var iconBackgroundColor: Color {
@@ -357,6 +357,15 @@ private struct SpaceCheckInCard: View {
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )
+        .contentShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.large,
+                style: .continuous
+            )
+        )
+        .onTapGesture {
+            onCheckIn()
+        }
     }
     
     private var header: some View {
@@ -411,7 +420,7 @@ private struct SpaceCheckInCard: View {
             HStack(
                 spacing: AppSpacing.standard
             ) {
-                Image(systemName: checkIn.mood.iconName)
+                Image(systemName: checkIn.mood.imageName)
                         .foregroundStyle(checkIn.mood.iconColor)
                     .font(.system(size: 42))
                 
@@ -473,12 +482,6 @@ private struct SpaceCheckInCard: View {
                 )
                 
                 Spacer()
-                
-                Button("Edit") {
-                    onCheckIn()
-                }
-                .buttonStyle(.bordered)
-                .tint(AppColors.textPrimary)
             }
         }
     }

@@ -9,9 +9,9 @@ import SwiftUI
 import Charts
 
 struct StatisticsView: View {
-    
+
     @StateObject private var viewModel: StatisticsViewModel
-    
+
     init(
         homeViewModel: HomeViewModel
     ) {
@@ -21,11 +21,11 @@ struct StatisticsView: View {
             )
         )
     }
-    
+
     var body: some View {
         List {
             filterSection
-            
+
             if viewModel.filteredCheckIns.isEmpty {
                 emptyStatisticsSection
             } else {
@@ -37,11 +37,13 @@ struct StatisticsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(AppColors.canvas)
+        .background(AppColors.warmCanvas)
         .navigationTitle("Statistics")
         .navigationBarTitleDisplayMode(.large)
     }
-    
+
+    // MARK: - Filters
+
     private var filterSection: some View {
         Section {
             Picker(
@@ -62,18 +64,17 @@ struct StatisticsView: View {
                     trailing: 16
                 )
             )
-            
+
             Picker(
                 "Period",
                 selection: $viewModel.selectedPeriod
             ) {
-                ForEach(
-                    StatisticsPeriod.allCases
-                ) { period in
+                ForEach(StatisticsPeriod.allCases) { period in
                     Text(period.title)
                         .tag(period)
                 }
-            }.pickerStyle(.menu)
+            }
+            .pickerStyle(.automatic)
             .listRowInsets(
                 EdgeInsets(
                     top: 8,
@@ -83,9 +84,11 @@ struct StatisticsView: View {
                 )
             )
         }
-        .listRowBackground(AppColors.surface)
+        .listRowBackground(AppColors.warmSurface)
     }
-    
+
+    // MARK: - Empty State
+
     private var emptyStatisticsSection: some View {
         Section {
             ContentUnavailableView(
@@ -110,12 +113,14 @@ struct StatisticsView: View {
         }
         .listRowBackground(Color.clear)
     }
-    
+
+    // MARK: - Mood Trend
+
     private var moodTrendSection: some View {
         Section("Mood Trend") {
-            moodTrendChart
+            moodTrendContent
                 .frame(
-                    minHeight: 220
+                    minHeight: 240
                 )
                 .listRowInsets(
                     EdgeInsets(
@@ -126,82 +131,149 @@ struct StatisticsView: View {
                     )
                 )
         }
-        .listRowBackground(AppColors.surface)
+        .listRowBackground(AppColors.warmSurface)
     }
-    
-    private var moodTrendChart: some View {
+
+    @ViewBuilder
+    private var moodTrendContent: some View {
+        switch viewModel.selectedPeriod {
+        case .last7Days:
+            weeklyMoodChart
+
+        case .last30Days:
+            monthlyMoodChart
+
+        case .allTime:
+            allTimeMoodChart
+        }
+    }
+
+    // MARK: - Last 7 Days
+
+    private struct MoodChartDay: Identifiable {
+        let date: Date
+        let checkIn: CheckIn?
+
+        var id: Date {
+            date
+        }
+    }
+
+    private var weeklyMoodChartDays: [MoodChartDay] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        return (0..<7).compactMap { offset in
+            guard let date = calendar.date(
+                byAdding: .day,
+                value: offset - 6,
+                to: today
+            ) else {
+                return nil
+            }
+
+            let checkIn = viewModel.filteredCheckIns.first { item in
+                calendar.isDate(
+                    item.date,
+                    inSameDayAs: date
+                )
+            }
+
+            return MoodChartDay(
+                date: date,
+                checkIn: checkIn
+            )
+        }
+    }
+
+    private var weeklyMoodChart: some View {
         Chart {
-            ForEach(
-                viewModel.filteredCheckIns.sorted {
-                    $0.date < $1.date
-                }
-            ) { checkIn in
-                BarMark(
-                    x: .value(
-                        "Date",
-                        checkIn.date,
-                        unit: .day
-                    ),
-                    y: .value(
-                        "Mood",
-                        checkIn.mood.score
+            ForEach(weeklyMoodChartDays) { day in
+                if let checkIn = day.checkIn {
+                    BarMark(
+                        x: .value(
+                            "Date",
+                            day.date,
+                            unit: .day
+                        ),
+                        y: .value(
+                            "Mood",
+                            checkIn.mood.score
+                        ),
+                        width: .fixed(30)
                     )
-                )
-                .foregroundStyle(
-                    checkIn.mood.iconColor
-                )
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: 10,
-                        style: .continuous
-                    )
-                )
-                .annotation(
-                    position: .top,
-                    alignment: .center
-                ) {
-                    Image(
-                        systemName: checkIn.mood.iconName
-                    )
-                    .font(.caption)
                     .foregroundStyle(
-                        checkIn.mood.iconColor
+                        checkIn.mood.chartColor
                     )
-                    .accessibilityHidden(true)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 20,
+                            style: .continuous
+                        )
+                    )
+                    .annotation(
+                        position: .overlay,
+                        alignment: .center
+                    ) {
+                        Image(checkIn.mood.chartImageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(
+                                width: 28,
+                                height: 28
+                            )
+                            .opacity(0.38)
+                            .blendMode(.screen)
+                            .accessibilityHidden(true)
+                    }
+                } else {
+                    BarMark(
+                        x: .value(
+                            "Date",
+                            day.date,
+                            unit: .day
+                        ),
+                        y: .value(
+                            "Mood",
+                            0
+                        ),
+                        width: .fixed(30)
+                    )
+                    .foregroundStyle(
+                        Color.black.opacity(0.035)
+                    )
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 20,
+                            style: .continuous
+                        )
+                    )
                 }
             }
         }
-        .frame(
-            height: 240
-        )
-        .chartYScale(
-            domain: 0...5
-        )
+        .frame(height: 240)
+        .chartYScale(domain: 0...5.25)
         .chartYAxis {
             AxisMarks(
                 values: [1, 2, 3, 4, 5]
-            ) { value in
+            ) { _ in
                 AxisGridLine()
                     .foregroundStyle(
-                        AppColors.textSecondary.opacity(0.12)
+                        AppColors.textSecondary.opacity(0.10)
                     )
-                
+
                 AxisValueLabel()
                     .foregroundStyle(
-                        AppColors.textSecondary
+                        AppColors.textSecondary.opacity(0.72)
                     )
             }
         }
         .chartXAxis {
             AxisMarks(
-                values: .stride(
-                    by: .day
-                )
-            ) { value in
+                values: .stride(by: .day)
+            ) { _ in
                 AxisValueLabel(
-                    format: .dateTime.weekday(
-                        .abbreviated
-                    )
+                    format: .dateTime.weekday(.abbreviated)
                 )
                 .foregroundStyle(
                     AppColors.textSecondary
@@ -211,7 +283,7 @@ struct StatisticsView: View {
         .chartPlotStyle { plotArea in
             plotArea
                 .background(
-                    AppColors.surface.opacity(0.1)
+                    AppColors.warmSurface.opacity(0.65)
                 )
                 .clipShape(
                     RoundedRectangle(
@@ -220,17 +292,246 @@ struct StatisticsView: View {
                     )
                 )
         }
-        .accessibilityElement(
-            children: .ignore
-        )
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Mood trend"
+            "Mood trend for the last seven days"
         )
         .accessibilityValue(
             moodChartAccessibilityValue
         )
     }
+
+    // MARK: - Last 30 Days
+
+    private struct WeeklyMoodAverage: Identifiable {
+        let weekStart: Date
+        let averageMood: Double
+
+        var id: Date {
+            weekStart
+        }
+    }
+
+    private var monthlyMoodAverages: [WeeklyMoodAverage] {
+        let calendar = Calendar.current
+        let checkIns = viewModel.filteredCheckIns
+
+        let groupedCheckIns = Dictionary(
+            grouping: checkIns
+        ) { checkIn in
+            calendar.date(
+                from: calendar.dateComponents(
+                    [.yearForWeekOfYear, .weekOfYear],
+                    from: checkIn.date
+                )
+            ) ?? checkIn.date
+        }
+
+        return groupedCheckIns
+            .map { weekStart, checkIns in
+                let average = checkIns
+                    .map { $0.mood.score }
+                    .reduce(0, +)
+                    / Double(checkIns.count)
+
+                return WeeklyMoodAverage(
+                    weekStart: weekStart,
+                    averageMood: average
+                )
+            }
+            .sorted { first, second in
+                first.weekStart < second.weekStart
+            }
+    }
+
+    private var monthlyMoodChart: some View {
+        moodLineChart(
+            checkIns: viewModel.filteredCheckIns,
+            accessibilityLabel: "Mood trend for the last thirty days"
+        )
+    }
+    // MARK: - All Time
+
+    private var allTimeMoodChart: some View {
+        moodLineChart(
+            checkIns: viewModel.filteredCheckIns,
+            accessibilityLabel: "All-time mood trend"
+        )
+    }
     
+    private func moodLineChart(
+        checkIns: [CheckIn],
+        accessibilityLabel: String
+    ) -> some View {
+        Chart {
+            ForEach(
+                checkIns.sorted { first, second in
+                    first.date < second.date
+                }
+            ) { checkIn in
+                AreaMark(
+                    x: .value(
+                        "Date",
+                        checkIn.date
+                    ),
+                    y: .value(
+                        "Mood",
+                        checkIn.mood.score
+                    )
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            AppColors.warmSurface.opacity(0.65),
+                            AppColors.warmSurface.opacity(0.0)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .interpolationMethod(.catmullRom)
+
+                LineMark(
+                    x: .value(
+                        "Date",
+                        checkIn.date
+                    ),
+                    y: .value(
+                        "Mood",
+                        checkIn.mood.score
+                    )
+                )
+                .foregroundStyle(
+                    AppColors.warmCanvas
+                )
+                .lineStyle(
+                    StrokeStyle(
+                        lineWidth: 4,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+                .interpolationMethod(.catmullRom)
+
+                PointMark(
+                    x: .value(
+                        "Date",
+                        checkIn.date
+                    ),
+                    y: .value(
+                        "Mood",
+                        checkIn.mood.score
+                    )
+                )
+                .foregroundStyle(
+                    checkIn.mood.chartColor.opacity(0.5)
+                )
+                .symbolSize(55)
+                .annotation(
+
+                    position: .top,
+                    alignment: .center,
+                    spacing: 6
+                ) {
+                    Text(checkIn.mood.title)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(
+                            checkIn.mood.titleColor.opacity(0.7)
+                        )
+                }
+            }
+        }
+        .frame(height: 240)
+        .chartYScale(domain: 0...5.25)
+        .chartYAxis {
+            AxisMarks(
+                values: [1, 2, 3, 4, 5]
+            ) { _ in
+                AxisGridLine()
+                    .foregroundStyle(
+                        AppColors.textSecondary.opacity(0.10)
+                    )
+
+                AxisValueLabel()
+                    .foregroundStyle(
+                        AppColors.textSecondary.opacity(0.72)
+                    )
+            }
+        }
+        .chartXAxis {
+            AxisMarks(
+                values: .automatic(desiredCount: 5)
+            ) { _ in
+                AxisValueLabel(
+                    format: .dateTime.day().month(.abbreviated)
+                )
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+            }
+        }
+        .chartPlotStyle { plotArea in
+            plotArea
+                .background(
+                    AppColors.warmSurface.opacity(0.65)
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: AppCornerRadius.standard,
+                        style: .continuous
+                    )
+                )
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+    
+    private struct MonthlyMoodAverage: Identifiable {
+        let monthStart: Date
+        let averageMood: Double
+
+        var id: Date {
+            monthStart
+        }
+    }
+
+    private var allTimeMoodAverages: [MonthlyMoodAverage] {
+        let calendar = Calendar.current
+        let checkIns = viewModel.filteredCheckIns
+
+        let groupedCheckIns = Dictionary(
+            grouping: checkIns
+        ) { checkIn in
+            calendar.date(
+                from: calendar.dateComponents(
+                    [.year, .month],
+                    from: checkIn.date
+                )
+            ) ?? checkIn.date
+        }
+
+        return groupedCheckIns
+            .map { monthStart, checkIns in
+                let average = checkIns
+                    .map { $0.mood.score }
+                    .reduce(0, +)
+                    / Double(checkIns.count)
+
+                return MonthlyMoodAverage(
+                    monthStart: monthStart,
+                    averageMood: average
+                )
+            }
+            .sorted { first, second in
+                first.monthStart < second.monthStart
+            }
+    }
+
+   
+
+    // MARK: - Daily Averages
+
     private var metricsSection: some View {
         Section("Daily Averages") {
             MetricSummaryRow(
@@ -242,7 +543,7 @@ struct StatisticsView: View {
                 tint: AppColors.accentMint,
                 systemImage: "chart.line.uptrend.xyaxis"
             )
-            
+
             MetricSummaryRow(
                 title: "Average Energy",
                 value: viewModel.formattedAverage(
@@ -252,7 +553,7 @@ struct StatisticsView: View {
                 tint: AppColors.accentYellow,
                 systemImage: "bolt.fill"
             )
-            
+
             MetricSummaryRow(
                 title: "Average Stress",
                 value: viewModel.formattedAverage(
@@ -263,17 +564,17 @@ struct StatisticsView: View {
                 systemImage: "waveform.path.ecg"
             )
         }
-        .listRowBackground(AppColors.surface)
+        .listRowBackground(AppColors.warmSurface)
     }
-    
+
     private struct MetricSummaryRow: View {
-        
+
         let title: String
         let value: String
         let progress: Double
         let tint: Color
         let systemImage: String
-        
+
         var body: some View {
             VStack(
                 alignment: .leading,
@@ -285,15 +586,15 @@ struct StatisticsView: View {
                     Image(systemName: systemImage)
                         .foregroundStyle(tint)
                         .frame(width: 22)
-                    
+
                     Text(title)
                         .font(.subheadline)
                         .foregroundStyle(
                             AppColors.textPrimary
                         )
-                    
+
                     Spacer()
-                    
+
                     Text(value)
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -301,7 +602,7 @@ struct StatisticsView: View {
                             AppColors.textPrimary
                         )
                 }
-                
+
                 ProgressView(
                     value: progress,
                     total: 5
@@ -313,7 +614,9 @@ struct StatisticsView: View {
             .padding(.vertical, 6)
         }
     }
-    
+
+    // MARK: - Check-In Count
+
     private var summarySection: some View {
         Section("Check-Ins") {
             HStack(
@@ -331,7 +634,7 @@ struct StatisticsView: View {
                         width: 48,
                         height: 48
                     )
-                    
+
                     Image(
                         systemName: "checkmark.circle.fill"
                     )
@@ -340,7 +643,7 @@ struct StatisticsView: View {
                         AppColors.accentMint
                     )
                 }
-                
+
                 VStack(
                     alignment: .leading,
                     spacing: 4
@@ -350,16 +653,16 @@ struct StatisticsView: View {
                         .foregroundStyle(
                             AppColors.textPrimary
                         )
-                    
+
                     Text("In selected period")
                         .font(.subheadline)
                         .foregroundStyle(
                             AppColors.textSecondary
                         )
                 }
-                
+
                 Spacer()
-                
+
                 Text(
                     "\(viewModel.totalCheckIns)"
                 )
@@ -381,9 +684,11 @@ struct StatisticsView: View {
                 "\(viewModel.totalCheckIns)"
             )
         }
-        .listRowBackground(AppColors.surface)
+        .listRowBackground(AppColors.warmSurface)
     }
-    
+
+    // MARK: - Insights
+
     private var insightsSection: some View {
         Section("Insights") {
             if viewModel.insights.isEmpty {
@@ -409,34 +714,37 @@ struct StatisticsView: View {
                 }
             }
         }
-        .listRowBackground(AppColors.surface)
+        .listRowBackground(AppColors.warmSurface)
     }
-    
+
+    // MARK: - Accessibility
+
     private var moodChartAccessibilityValue: String {
         guard let firstCheckIn =
             viewModel.filteredCheckIns.first
         else {
             return "No mood data available"
         }
-        
+
         let firstMood = firstCheckIn.mood.title
-        
+
         guard let lastCheckIn =
             viewModel.filteredCheckIns.last
         else {
             return "Mood was \(firstMood)"
         }
-        
+
         let lastMood = lastCheckIn.mood.title
-        
+
         if firstMood == lastMood {
             return "Mood remained \(lastMood)"
         }
-        
+
         return "Mood changed from \(firstMood) to \(lastMood)"
     }
 }
 
+// MARK: - Previews
 
 #Preview("Statistics - Light Mode") {
     NavigationStack {
@@ -473,11 +781,11 @@ struct StatisticsView: View {
     }
 }
 
+// MARK: - Preview Storage
+
 final class StatisticsPreviewStorageService:
     CheckInStorageService {
-    
-    
-    
+
     private var previewCheckIns: [CheckIn] = [
         CheckIn(
             date: Date(),
@@ -491,7 +799,7 @@ final class StatisticsPreviewStorageService:
                 "Productive"
             ]
         ),
-        
+
         CheckIn(
             date: Date().addingTimeInterval(-86_400),
             space: .personal,
@@ -503,7 +811,7 @@ final class StatisticsPreviewStorageService:
                 "Family"
             ]
         ),
-        
+
         CheckIn(
             date: Date(),
             space: .professional,
@@ -515,15 +823,17 @@ final class StatisticsPreviewStorageService:
                 "Development"
             ]
         ),
-        
+
         CheckIn(
             date: Date().addingTimeInterval(-2 * 86_400),
             space: .professional,
             mood: .happy,
-            energyLevel: 5,
-            stressLevel: 1,
+            energyLevel: 4,
+            stressLevel: 3,
             note: "A very productive day.",
-            tags: ["Focus"]
+            tags: [
+                "Focus"
+            ]
         ),
 
         CheckIn(
@@ -533,7 +843,9 @@ final class StatisticsPreviewStorageService:
             energyLevel: 2,
             stressLevel: 4,
             note: "Needed more time to rest.",
-            tags: ["Rest"]
+            tags: [
+                "Rest"
+            ]
         ),
 
         CheckIn(
@@ -543,14 +855,28 @@ final class StatisticsPreviewStorageService:
             energyLevel: 4,
             stressLevel: 2,
             note: "A balanced workday.",
-            tags: ["Balance"]
+            tags: [
+                "Balance"
+            ]
+        ),
+
+        CheckIn(
+            date: Date().addingTimeInterval(-5 * 86_400),
+            space: .professional,
+            mood: .angry,
+            energyLevel: 4,
+            stressLevel: 2,
+            note: "A balanced workday.",
+            tags: [
+                "Balance"
+            ]
         )
     ]
-    
+
     func loadCheckIns() -> [CheckIn] {
         previewCheckIns
     }
-    
+
     func saveCheckIns(
         _ checkIns: [CheckIn]
     ) {

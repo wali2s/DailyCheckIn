@@ -89,7 +89,7 @@ struct HistoryView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(AppColors.canvas)
+        .background(AppColors.warmCanvas)
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.large)
         .searchable(
@@ -133,7 +133,7 @@ struct HistoryView: View {
                 )
             )
         }
-        .listRowBackground(AppColors.surface)
+        .listRowBackground(AppColors.warmSurface)
     }
     
     private var emptySection: some View {
@@ -251,7 +251,7 @@ private struct HistoryRow: View {
             alignment: .leading
         )
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.warmSurface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )
@@ -305,7 +305,7 @@ private struct HistoryRow: View {
         HStack(
             spacing: AppSpacing.small
         ) {
-            Image(systemName: checkIn.mood.iconName)
+            Image(systemName: checkIn.mood.imageName)
                 .font(.title2)
                 .foregroundStyle(checkIn.mood.iconColor)
             

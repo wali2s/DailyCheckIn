@@ -51,10 +51,11 @@ struct CheckInDetailView: View {
             .padding(.vertical, AppSpacing.standard)
         }
         .scrollIndicators(.hidden)
-        .background(AppColors.canvas)
+        .background(AppColors.warmCanvas)
         .navigationTitle("Check-In Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+    
             ToolbarItem(
                 placement: .navigationBarTrailing
             ) {
@@ -85,7 +86,7 @@ struct CheckInDetailView: View {
                             height: 76
                         )
                     
-                    Image(systemName: checkIn.mood.iconName)
+                    Image(systemName: checkIn.mood.imageName)
                             .foregroundStyle(checkIn.mood.iconColor)
                 }
                 
@@ -128,7 +129,7 @@ struct CheckInDetailView: View {
             )
         }
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.warmSurface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )
@@ -277,7 +278,7 @@ struct CheckInDetailView: View {
             content()
         }
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.warmSurface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )

@@ -14,6 +14,7 @@ struct CheckInView: View {
     @StateObject private var viewModel: CheckInViewModel
     
     @State private var currentStep = 0
+    @State private var moodScrollPosition: Mood?
     
     let isEditing: Bool
     let onSave: (CheckIn) -> Void
@@ -55,7 +56,7 @@ struct CheckInView: View {
                 spacing: 0
             ) {
                 progressIndicator
-                
+
                 ScrollView {
                     stepContent
                         .padding(.horizontal, AppSpacing.screenHorizontal)
@@ -63,10 +64,18 @@ struct CheckInView: View {
                         .padding(.bottom, AppSpacing.standard)
                 }
                 .scrollIndicators(.hidden)
-                
+
                 navigationControls
             }
-            .background(AppColors.canvas)
+            .background {
+                viewModel.mood.backgroundColor
+                    .ignoresSafeArea()
+                    .opacity(0.7)
+            }
+            .animation(
+                .easeInOut(duration: 0.45),
+                value: viewModel.mood
+            )
             .navigationTitle(
                 isEditing
                 ? "Edit Check-In"
@@ -96,12 +105,10 @@ struct CheckInView: View {
                 Capsule()
                     .fill(
                         step <= currentStep
-                        ? accentColor
-                        : AppColors.surfaceSecondary
+                        ? Color.white
+                        : AppColors.surfaceSecondary.opacity(0.9)
                     )
-                    .frame(
-                        height: 6
-                    )
+                    .frame(height: 4)
             }
         }
         .padding(.horizontal, AppSpacing.screenHorizontal)
@@ -141,22 +148,161 @@ struct CheckInView: View {
         ) {
             stepHeader(
                 title: "How do you feel today?",
-                subtitle: "Choose the mood that fits you best.",
+                subtitle: "Swipe vertically and choose the mood that fits you best.",
                 systemImage: "face.smiling"
             )
-            
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible()),
-                    GridItem(.flexible())
-                ],
-                spacing: AppSpacing.small
-            ) {
-                ForEach(Mood.allCases) { mood in
-                    moodButton(mood)
+
+            horizontalMoodCarousel
+        }
+    }
+    
+    private var horizontalMoodCarousel: some View {
+        GeometryReader { geometry in
+            let cardWidth = geometry.size.width * 0.72
+            let cardHeight: CGFloat = 330
+            let cardSpacing: CGFloat = 12
+            let viewportWidth = geometry.size.width
+
+            ScrollView(.horizontal) {
+                LazyHStack(
+                    spacing: cardSpacing
+                ) {
+                    ForEach(Mood.allCases) { mood in
+                        GeometryReader { cardGeometry in
+                            let cardMidX = cardGeometry.frame(
+                                in: .named("moodCarousel")
+                            ).midX
+
+                            let viewportMidX = viewportWidth / 2
+
+                            let distance = abs(
+                                cardMidX - viewportMidX
+                            )
+
+                            let progress = min(
+                                distance / (cardWidth + cardSpacing),
+                                1
+                            )
+
+                            let scale = 1 - (progress * 0.20)
+                            let opacity = 1 - (progress * 0.48)
+
+                            verticalMoodCard(
+                                mood: mood,
+                                isSelected: mood == viewModel.mood
+                            )
+                            .scaleEffect(scale)
+                            .opacity(opacity)
+                            .animation(
+                                .easeOut(duration: 0.18),
+                                value: progress
+                            )
+                            .onTapGesture {
+                                withAnimation(
+                                    .spring(
+                                        response: 0.35,
+                                        dampingFraction: 0.82
+                                    )
+                                ) {
+                                    viewModel.mood = mood
+                                    moodScrollPosition = mood
+                                }
+                            }
+                        }
+                        .frame(
+                            width: cardWidth,
+                            height: cardHeight
+                        )
+                        .id(mood)
+                    }
+                }
+                .scrollTargetLayout()
+                .padding(
+                    .horizontal,
+                    (viewportWidth - cardWidth) / 2
+                )
+            }
+            .coordinateSpace(name: "moodCarousel")
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $moodScrollPosition)
+            .onAppear {
+                moodScrollPosition = viewModel.mood
+            }
+            .onChange(of: moodScrollPosition) { _, mood in
+                guard let mood else {
+                    return
+                }
+
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    viewModel.mood = mood
                 }
             }
         }
+        .frame(height: 360)
+    }
+    private func verticalMoodCard(
+        mood: Mood,
+        isSelected: Bool
+    ) -> some View {
+        VStack(
+            spacing: 14
+        ) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(mood.backgroundColor.opacity(0.42))
+                    .frame(width: 270, height: 270)
+                    .blur(radius: 22)
+
+                Image(mood.imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 340, height:340)
+                    .mask {
+                        RadialGradient(
+                            colors: [
+                                .black,
+                                .black,
+                                .black.opacity(0.92),
+                                .black.opacity(0.45),
+                                .clear
+                            ],
+                            center: .center,
+                            startRadius: 90,
+                            endRadius:190
+                        )
+                    }
+            }
+            .frame(width: 270, height: 270)
+
+            Text(mood.title)
+                .font(.system(
+                    size: 22,
+                    weight: .semibold,
+                    design: .rounded
+                ))
+                .foregroundStyle(mood.titleColor)
+                .opacity(
+                    isSelected ? 1.0 : 0.72
+                )
+
+            Spacer()
+        }
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity
+        )
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(mood.title)
+        .accessibilityValue(
+            isSelected ? "Selected" : "Not selected"
+        )
+        .accessibilityHint(
+            "Swipe horizontally to change the selected mood."
+        )
     }
     
     private var metricsStep: some View {
@@ -165,24 +311,237 @@ struct CheckInView: View {
             spacing: AppSpacing.section
         ) {
             stepHeader(
-                title: "How are you doing?",
-                subtitle: "Rate your energy and stress level.",
-                systemImage: "chart.bar.fill"
+                title: factorsTitle,
+                subtitle: factorsSubtitle,
+                systemImage: factorsSystemImage
             )
-            
-            ratingCard(
-                title: "Energy",
-                systemImage: "bolt.fill",
-                value: $viewModel.energyLevel,
-                tint: AppColors.accentYellow
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ],
+                spacing: AppSpacing.small
+            ) {
+                switch viewModel.space {
+                case .personal:
+                    ForEach(viewModel.availablePersonalFactors) { factor in
+                        personalFactorButton(factor)
+                    }
+
+                case .professional:
+                    ForEach(ProfessionalFactor.allCases) { factor in
+                        professionalFactorButton(factor)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var factorsTitle: String {
+        switch viewModel.space {
+        case .personal:
+            return personalFactorsTitle
+
+        case .professional:
+            return "What influenced your workday?"
+        }
+    }
+
+    private var factorsSubtitle: String {
+        switch viewModel.space {
+        case .personal:
+            return personalFactorsSubtitle
+
+        case .professional:
+            return "Select everything that applied today."
+        }
+    }
+
+    private var factorsSystemImage: String {
+        switch viewModel.space {
+        case .personal:
+            return "heart.text.square.fill"
+
+        case .professional:
+            return "briefcase.fill"
+        }
+    }
+
+    private var personalFactorsTitle: String {
+        switch viewModel.mood {
+        case .calm:
+            return "What helped you feel calm?"
+
+        case .good:
+            return "What made your day good?"
+
+        case .happy:
+            return "What contributed to your happiness?"
+
+        case .neutral:
+            return "What influenced your mood today?"
+
+        case .sad, .angry:
+            return "What is affecting you today?"
+        }
+    }
+
+    private var personalFactorsSubtitle: String {
+        switch viewModel.mood {
+        case .calm, .good, .happy:
+            return "Select everything that contributed to this feeling."
+
+        case .neutral:
+            return "Select everything that influenced your day."
+
+        case .sad, .angry:
+            return "Select everything that feels relevant right now."
+        }
+    }
+    
+    private func personalFactorButton(
+        _ factor: PersonalFactor
+    ) -> some View {
+        let isSelected = viewModel.personalFactors.contains(factor)
+
+        return Button {
+            togglePersonalFactor(factor)
+        } label: {
+            factorButtonLabel(
+                title: factor.title,
+                systemImage: factor.systemImage,
+                isSelected: isSelected,
             )
-            
-            ratingCard(
-                title: "Stress",
-                systemImage: "waveform.path.ecg",
-                value: $viewModel.stressLevel,
-                tint: AppColors.accentPink
+            .animation(.easeInOut(duration: 0.25), value: viewModel.mood)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(factor.title)
+        .accessibilityValue(
+            isSelected
+            ? "Selected"
+            : "Not selected"
+        )
+    }
+
+    private func professionalFactorButton(
+        _ factor: ProfessionalFactor
+    ) -> some View {
+        let isSelected = viewModel.professionalFactors.contains(factor)
+
+        return Button {
+            toggleProfessionalFactor(factor)
+        } label: {
+            factorButtonLabel(
+                title: factor.title,
+                systemImage: factor.systemImage,
+                isSelected: isSelected,
             )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(factor.title)
+        .accessibilityValue(
+            isSelected
+            ? "Selected"
+            : "Not selected"
+        )
+    }
+
+    private func factorButtonLabel(
+        title: String,
+        systemImage: String,
+        isSelected: Bool
+    ) -> some View {
+        HStack(
+            spacing: AppSpacing.large
+        ) {
+            Image(systemName: systemImage)
+                .font(.subheadline)
+                .foregroundStyle(
+                    isSelected
+                    ? .white
+                    : AppColors.primaryAction
+                )
+
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(
+                    isSelected
+                    ? .bold
+                    : .semibold
+                )
+                .foregroundStyle(
+                    isSelected
+                    ? .white
+                    : AppColors.textPrimary
+                )
+                .multilineTextAlignment(.leading)
+
+            Spacer(
+                minLength: 0
+            )
+        }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: 28,
+            alignment: .leading
+        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 15)
+        .background(
+            isSelected
+            ? AppColors.primaryAction
+            : Color.white.opacity(0.7)
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.pill,
+                style: .continuous
+            )
+        )
+        .overlay {
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.pill,
+                style: .continuous
+            )
+            .stroke(
+                isSelected
+                ? AppColors.primaryAction.opacity(0.92)
+                : Color.black.opacity(0.05),
+                lineWidth: 1
+            )
+        }
+        .shadow(
+            color: isSelected
+            ? AppColors.primaryAction.opacity(0.18)
+            : .clear,
+            radius: 7,
+            x: 0,
+            y: 3
+        )
+        .animation(
+            .easeInOut(duration: 0.20),
+            value: isSelected
+        )
+    }
+
+    private func togglePersonalFactor(
+        _ factor: PersonalFactor
+    ) {
+        if viewModel.personalFactors.contains(factor) {
+            viewModel.personalFactors.remove(factor)
+        } else {
+            viewModel.personalFactors.insert(factor)
+        }
+    }
+
+    private func toggleProfessionalFactor(
+        _ factor: ProfessionalFactor
+    ) {
+        if viewModel.professionalFactors.contains(factor) {
+            viewModel.professionalFactors.remove(factor)
+        } else {
+            viewModel.professionalFactors.insert(factor)
         }
     }
     
@@ -205,6 +564,28 @@ struct CheckInView: View {
         }
     }
     
+    private var reflectionPrompt: String {
+        switch viewModel.mood {
+        case .calm:
+            return "What helped you feel calm today?"
+
+        case .good:
+            return "What went well for you today?"
+
+        case .happy:
+            return "What made you happiest today?"
+
+        case .neutral:
+            return "What stood out about your day?"
+
+        case .sad:
+            return "What do you need most right now?"
+
+        case .angry:
+            return "What would help you release some tension?"
+        }
+    }
+    
     private var reflectionPromptCard: some View {
         VStack(
             alignment: .leading,
@@ -216,11 +597,12 @@ struct CheckInView: View {
             )
             .font(.headline)
             .foregroundStyle(
-                AppColors.textPrimary
+                AppColors.textPrimary.opacity(0.8)
             )
+            .fontWeight(.bold)
             
             Text(
-                viewModel.space.reflectionPrompt
+                reflectionPrompt
             )
             .font(.body)
             .foregroundStyle(
@@ -232,9 +614,30 @@ struct CheckInView: View {
             )
         }
         .appCardStyle(
-            backgroundColor: accentColor.opacity(0.16),
+            backgroundColor: viewModel.mood.backgroundColor.opacity(0.82),
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
+        )
+        .frame(maxWidth: .infinity)
+        .overlay {
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.large,
+                style: .continuous
+            )
+            .stroke(
+                viewModel.mood.titleColor.opacity(0.02),
+                lineWidth: 1
+            )
+        }
+        .shadow(
+            color: viewModel.mood.titleColor.opacity(0.10),
+            radius: 10,
+            x: 0,
+            y: 5
+        )
+        .animation(
+            .easeInOut(duration: 0.35),
+            value: viewModel.mood
         )
     }
     
@@ -250,7 +653,7 @@ struct CheckInView: View {
             .font(.headline)
             .foregroundStyle(
                 AppColors.textPrimary
-            )
+            ).opacity(0.9)
             
             TextField(
                 "Write a short note...",
@@ -261,8 +664,22 @@ struct CheckInView: View {
             .textFieldStyle(.plain)
             .lineLimit(4...8)
             .padding(12)
-            .background(
-                AppColors.surfaceSecondary
+            .background {
+                reflectionFieldColor
+            }
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.small,
+                    style: .continuous
+                )
+                .stroke(
+                    viewModel.mood.titleColor.opacity(0.18),
+                    lineWidth: 1
+                )
+            }
+            .animation(
+                .easeInOut(duration: 0.35),
+                value: viewModel.mood
             )
             .clipShape(
                 RoundedRectangle(
@@ -293,7 +710,7 @@ struct CheckInView: View {
             .font(.headline)
             .foregroundStyle(
                 AppColors.textPrimary
-            )
+            ).opacity(0.9)
             
             TextField(
                 "Focus, Learning, Exercise",
@@ -304,8 +721,22 @@ struct CheckInView: View {
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
             .padding(12)
-            .background(
-                AppColors.surfaceSecondary
+            .background {
+                reflectionFieldColor
+            }
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.small,
+                    style: .continuous
+                )
+                .stroke(
+                    viewModel.mood.titleColor.opacity(0.18),
+                    lineWidth: 1
+                )
+            }
+            .animation(
+                .easeInOut(duration: 0.35),
+                value: viewModel.mood
             )
             .clipShape(
                 RoundedRectangle(
@@ -315,7 +746,7 @@ struct CheckInView: View {
             )
         }
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: AppColors.warmSurface,
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
         )
@@ -366,12 +797,15 @@ struct CheckInView: View {
             HStack(
                 spacing: AppSpacing.small
             ) {
-                Image(systemName: mood.iconName)
-                    .font(.headline)
-                    .foregroundStyle(
-                        isSelected
-                        ? .black
-                        : mood.iconColor
+                Image(mood.imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 42, height: 42)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 10,
+                            style: .continuous
+                        )
                     )
                 
                 Text(mood.title)
@@ -505,19 +939,11 @@ struct CheckInView: View {
     }
     
     private var navigationControls: some View {
-        HStack(
-            spacing: AppSpacing.standard
+        VStack(
+            spacing: AppSpacing.small
         ) {
-            if currentStep > 0 {
-                Button("Back") {
-                    withAnimation(.easeInOut) {
-                        currentStep -= 1
-                    }
-                }
-                .buttonStyle(.bordered)
-                .tint(AppColors.textPrimary)
-            }
-            
+           
+
             Button {
                 if isLastStep {
                     saveCheckIn()
@@ -535,7 +961,8 @@ struct CheckInView: View {
             }
             .buttonStyle(
                 PrimaryButtonStyle(
-                    backgroundColor: accentColor
+                    backgroundColor: AppColors.primaryAction
+                        .opacity(0.9)
                 )
             )
             .disabled(!canContinue)
@@ -545,17 +972,49 @@ struct CheckInView: View {
                 ? "saveCheckInButton"
                 : "continueCheckInButton.step\(currentStep + 1)"
             )
+            
+            if currentStep > 0 {
+                Button("Back") {
+                    withAnimation(.easeInOut) {
+                        currentStep -= 1
+                    }
+                }
+                .font(.system(
+                    size: 17,
+                    weight: .semibold,
+                    design: .rounded
+                ))
+                .foregroundStyle(AppColors.textPrimary)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: 48
+                )
+                .background(AppColors.surface).opacity(0.9)
+                .clipShape(Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(
+                            AppColors.textPrimary.opacity(0.10),
+                            lineWidth: 1
+                        )
+                }
+            }
         }
         .padding(.horizontal, AppSpacing.screenHorizontal)
         .padding(.vertical, AppSpacing.standard)
-        .background(
-            AppColors.canvas
+        .background {
+            viewModel.mood.backgroundColor
+                .opacity(0.7)
                 .shadow(
                     color: Color.black.opacity(0.06),
                     radius: 8,
                     x: 0,
                     y: -3
                 )
+        }
+        .animation(
+            .easeInOut(duration: 0.45),
+            value: viewModel.mood
         )
     }
     
@@ -571,10 +1030,7 @@ struct CheckInView: View {
             return true
             
         case 1:
-            return viewModel.energyLevel >= 1 &&
-                viewModel.energyLevel <= 5 &&
-                viewModel.stressLevel >= 1 &&
-                viewModel.stressLevel <= 5
+            return true
             
         case 2:
             return true
@@ -582,6 +1038,10 @@ struct CheckInView: View {
         default:
             return false
         }
+    }
+    
+    private var reflectionFieldColor: Color {
+        viewModel.mood.backgroundColor.opacity(0.62)
     }
 }
 

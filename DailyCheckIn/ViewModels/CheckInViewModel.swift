@@ -12,9 +12,88 @@ final class CheckInViewModel: ObservableObject {
     
     let space: JournalSpace
     
+    var availablePersonalFactors: [PersonalFactor] {
+        switch mood {
+        case .calm:
+            return [
+                .rested,
+                .relaxed,
+                .connected,
+                .grateful,
+                .supported,
+                .hopeful,
+                .other
+            ]
+
+        case .good:
+            return [
+                .accomplished,
+                .energized,
+                .connected,
+                .grateful,
+                .inspired,
+                .supported,
+                .relaxed,
+                .other
+            ]
+
+        case .happy:
+            return [
+                .loved,
+                .connected,
+                .grateful,
+                .accomplished,
+                .energized,
+                .inspired,
+                .hopeful,
+                .other
+            ]
+
+        case .neutral:
+            return [
+                .rested,
+                .connected,
+                .grateful,
+                .energized,
+                .relaxed,
+                .sleepiness,
+                .stress,
+                .other
+            ]
+
+        case .sad:
+            return [
+                .sadness,
+                .loneliness,
+                .sleepiness,
+                .anxiety,
+                .stress,
+                .insomnia,
+                .apathy,
+                .envy,
+                .supported,
+                .other
+            ]
+
+        case .angry:
+            return [
+                .anger,
+                .stress,
+                .anxiety,
+                .sleepiness,
+                .apathy,
+                .loneliness,
+                .insomnia,
+                .other
+            ]
+        }
+    }
+    
     @Published var mood: Mood
     @Published var energyLevel: Int
     @Published var stressLevel: Int
+    @Published var personalFactors: Set<PersonalFactor>
+    @Published var professionalFactors: Set<ProfessionalFactor>
     @Published var note: String
     @Published var tagsText: String
     
@@ -33,6 +112,12 @@ final class CheckInViewModel: ObservableObject {
         self.mood = existingCheckIn?.mood ?? .neutral
         self.energyLevel = existingCheckIn?.energyLevel ?? 3
         self.stressLevel = existingCheckIn?.stressLevel ?? 3
+        self.personalFactors = Set(
+            existingCheckIn?.personalFactors ?? []
+        )
+        self.professionalFactors = Set(
+            existingCheckIn?.professionalFactors ?? []
+        )
         self.note = existingCheckIn?.note ?? ""
         self.tagsText = existingCheckIn?.tags.joined(
             separator: ", "
