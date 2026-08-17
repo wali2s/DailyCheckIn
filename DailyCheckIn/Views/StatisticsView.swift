@@ -192,39 +192,54 @@ struct StatisticsView: View {
                 if let checkIn = day.checkIn {
                     BarMark(
                         x: .value(
-                            "Date",
-                            day.date,
+                            "Day",
+                            checkIn.date,
                             unit: .day
                         ),
                         y: .value(
                             "Mood",
                             checkIn.mood.score
-                        ),
-                        width: .fixed(30)
+                        )
                     )
                     .foregroundStyle(
-                        checkIn.mood.chartColor
+                        checkIn.mood.chartColor.opacity(0.5)
                     )
                     .clipShape(
                         RoundedRectangle(
-                            cornerRadius: 20,
+                            cornerRadius: 80,
                             style: .continuous
                         )
                     )
                     .annotation(
                         position: .overlay,
-                        alignment: .center
+                        alignment: .top,
+                        spacing: 0
                     ) {
-                        Image(checkIn.mood.chartImageName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(
-                                width: 28,
-                                height: 28
-                            )
-                            .opacity(0.38)
-                            .blendMode(.screen)
-                            .accessibilityHidden(true)
+                        ZStack {
+                            
+                            // Etwas dunklerer Mood-Kopf
+                            Circle()
+                                .fill(
+                                    checkIn.mood.chartColor
+                                        .opacity(0.5)
+                                )
+                                .frame(
+                                    width: 33,
+                                    height: 33
+                                )
+                            
+                            // PNG ohne Hintergrund
+                            Image(checkIn.mood.chartImageName)
+                                .resizable()
+                                .scaledToFit()
+                                
+                        }.shadow(
+                            color: .black.opacity(0.059),
+                            radius: 4,
+                            x: 0,
+                            y: 2
+                        )
+                      
                     }
                 } else {
                     BarMark(
@@ -382,7 +397,7 @@ struct StatisticsView: View {
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
-                            AppColors.warmSurface.opacity(0.65),
+                            AppColors.warmSurface.opacity(0.9),
                             AppColors.warmSurface.opacity(0.0)
                         ],
                         startPoint: .top,
@@ -402,11 +417,11 @@ struct StatisticsView: View {
                     )
                 )
                 .foregroundStyle(
-                    AppColors.warmCanvas
+                    Color.brown.opacity(0.4)
                 )
                 .lineStyle(
                     StrokeStyle(
-                        lineWidth: 4,
+                        lineWidth: 2,
                         lineCap: .round,
                         lineJoin: .round
                     )
@@ -446,7 +461,7 @@ struct StatisticsView: View {
         .chartYScale(domain: 0...5.25)
         .chartYAxis {
             AxisMarks(
-                values: [1, 2, 3, 4, 5]
+                values: [1, 2, 3, 4, 5, 6]
             ) { _ in
                 AxisGridLine()
                     .foregroundStyle(
@@ -534,6 +549,15 @@ struct StatisticsView: View {
 
     private var metricsSection: some View {
         Section("Daily Averages") {
+            
+            MetricSummaryRow(
+                title: "Daily Score",
+                value: viewModel.formattedAverageDailyScore,
+                progress: viewModel.averageDailyScore,
+                tint: AppColors.accentMint,
+                systemImage: "star.circle.fill"
+            )
+            
             MetricSummaryRow(
                 title: "Average Mood",
                 value: viewModel.formattedAverage(
@@ -840,7 +864,7 @@ final class StatisticsPreviewStorageService:
             date: Date().addingTimeInterval(-4 * 86_400),
             space: .personal,
             mood: .sad,
-            energyLevel: 2,
+            energyLevel: 4,
             stressLevel: 4,
             note: "Needed more time to rest.",
             tags: [
@@ -865,7 +889,7 @@ final class StatisticsPreviewStorageService:
             space: .professional,
             mood: .angry,
             energyLevel: 4,
-            stressLevel: 2,
+            stressLevel: 4,
             note: "A balanced workday.",
             tags: [
                 "Balance"

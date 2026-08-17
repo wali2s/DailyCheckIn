@@ -290,4 +290,21 @@ enum Mood: String, CaseIterable, Codable, Hashable, Identifiable {
         }
     
     
+    var sfSymbolName: String {
+        switch self {
+        case .calm:
+            return "face.smiling"
+        case .good:
+            return "face.smiling.badge.plus"
+        case .happy:
+            return "face.starstruck"
+        case .neutral:
+            return "face.dashed"
+        case .sad:
+            return "face.smiling"
+        case .angry:
+            return "face.smiling.inverse"
+        }
+    }
+    
 }

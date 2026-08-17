@@ -48,6 +48,8 @@ final class StatisticsViewModel: ObservableObject {
     @Published var selectedPeriod: StatisticsPeriod = .allTime
     @Published private(set) var totalCheckIns: Int = 0
     
+    private let evaluator = CheckInEvaluator()
+    
     private var cancellables = Set<AnyCancellable>()
     private let calendar = Calendar.current
     
@@ -236,5 +238,23 @@ final class StatisticsViewModel: ObservableObject {
         checkIns.filter {
             $0.space == selectedSpace
         }
+    }
+    
+    var averageDailyScore: Double {
+        guard !filteredCheckIns.isEmpty else {
+            return 0
+        }
+        
+        let total = filteredCheckIns
+            .map {
+                evaluator.evaluate($0).overallScore
+            }
+            .reduce(0, +)
+        
+        return total / Double(filteredCheckIns.count)
+    }
+    
+    var formattedAverageDailyScore: String {
+        "\(Int((averageDailyScore * 20).rounded()))%"
     }
 }

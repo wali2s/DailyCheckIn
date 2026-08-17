@@ -133,7 +133,9 @@ final class CheckInViewModel: ObservableObject {
             energyLevel: energyLevel,
             stressLevel: stressLevel,
             note: note,
-            tags: parsedTags
+            tags: parsedTags,
+            personalFactors: Array(personalFactors),
+            professionalFactors: Array(professionalFactors)
         )
     }
     

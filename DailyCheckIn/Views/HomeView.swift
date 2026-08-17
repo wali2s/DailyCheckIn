@@ -41,7 +41,9 @@ struct HomeView: View {
                 .foregroundStyle(AppColors.textSecondary)
             }
         }
-        .sheet(item: $selectedSpace) { space in
+        .navigationDestination(
+            item: $selectedSpace
+        ) { space in
             CheckInView(
                 space: space,
                 existingCheckIn: viewModel.checkIn(
@@ -49,6 +51,7 @@ struct HomeView: View {
                 )
             ) { newCheckIn in
                 viewModel.addCheckIn(newCheckIn)
+                selectedSpace = nil
             }
         }
         .onReceive(

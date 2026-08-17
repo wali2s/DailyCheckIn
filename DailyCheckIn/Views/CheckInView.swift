@@ -136,6 +136,7 @@ struct CheckInView: View {
         case 2:
             reflectionStep
             
+            
         default:
             EmptyView()
         }
@@ -310,31 +311,51 @@ struct CheckInView: View {
             alignment: .leading,
             spacing: AppSpacing.section
         ) {
+            Spacer()
             stepHeader(
                 title: factorsTitle,
                 subtitle: factorsSubtitle,
                 systemImage: factorsSystemImage
             )
-
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible()),
-                    GridItem(.flexible())
-                ],
-                spacing: AppSpacing.small
+            
+            FlowLayout(
+                spacing: 10,
+                rowSpacing: 10
             ) {
+                
                 switch viewModel.space {
+                    
                 case .personal:
                     ForEach(viewModel.availablePersonalFactors) { factor in
                         personalFactorButton(factor)
                     }
-
+                    
                 case .professional:
                     ForEach(ProfessionalFactor.allCases) { factor in
                         professionalFactorButton(factor)
                     }
                 }
             }
+            Spacer()
+            stepHeader(
+                title: "How are you doing?",
+                subtitle: "Rate your energy and stress level.",
+                systemImage: "chart.bar.fill"
+            )
+            
+            ratingCard(
+                title: "Energy",
+                systemImage: "bolt.fill",
+                value: $viewModel.energyLevel,
+            )
+            
+            ratingCard(
+                title: "Stress",
+                systemImage: "waveform.path.ecg",
+                value: $viewModel.stressLevel,
+            )
+            
+            
         }
     }
     
@@ -867,8 +888,7 @@ struct CheckInView: View {
     private func ratingCard(
         title: String,
         systemImage: String,
-        value: Binding<Int>,
-        tint: Color
+        value: Binding<Int>
     ) -> some View {
         VStack(
             alignment: .leading,
@@ -881,18 +901,18 @@ struct CheckInView: View {
                 )
                 .font(.headline)
                 .foregroundStyle(
-                    AppColors.textPrimary
+                    .black.opacity(0.8)
                 )
-                
+
                 Spacer()
-                
+
                 Text("\(value.wrappedValue)/5")
                     .font(.headline)
                     .foregroundStyle(
-                        AppColors.textSecondary
+                        .black.opacity(0.8)
                     )
             }
-            
+
             HStack(
                 spacing: AppSpacing.small
             ) {
@@ -905,24 +925,24 @@ struct CheckInView: View {
                     } label: {
                         Text("\(level)")
                             .font(.headline)
+                            .fontWeight(.bold)
                             .foregroundStyle(
                                 value.wrappedValue >= level
-                                ? .black
+                                ? .white
                                 : AppColors.textSecondary
                             )
                             .frame(
                                 maxWidth: .infinity,
-                                minHeight: 46
+                                minHeight: 36
                             )
                             .background(
                                 value.wrappedValue >= level
-                                ? tint
-                                : AppColors.surfaceSecondary
+                                ? .black.opacity(0.76)
+                                : viewModel.mood.backgroundColor.opacity(0.65)
                             )
                             .clipShape(
                                 RoundedRectangle(
-                                    cornerRadius:
-                                        AppCornerRadius.small,
+                                    cornerRadius: AppCornerRadius.large,
                                     style: .continuous
                                 )
                             )
@@ -932,9 +952,29 @@ struct CheckInView: View {
             }
         }
         .appCardStyle(
-            backgroundColor: AppColors.surface,
+            backgroundColor: viewModel.mood.backgroundColor.opacity(0.82),
             cornerRadius: AppCornerRadius.large,
             padding: AppSpacing.cardPadding
+        )
+        .overlay {
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.large,
+                style: .continuous
+            )
+            .stroke(
+                viewModel.mood.titleColor.opacity(0.12),
+                lineWidth: 1
+            )
+        }
+        .shadow(
+            color: viewModel.mood.titleColor.opacity(0.08),
+            radius: 10,
+            x: 0,
+            y: 5
+        )
+        .animation(
+            .easeInOut(duration: 0.35),
+            value: viewModel.mood
         )
     }
     
