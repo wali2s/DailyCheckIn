@@ -10,9 +10,10 @@ import Combine
 
 enum StatisticsPeriod: String, CaseIterable, Identifiable {
     
-    case allTime
     case last7Days
     case last30Days
+    case allTime
+   
     
     var id: String {
         rawValue
@@ -20,23 +21,25 @@ enum StatisticsPeriod: String, CaseIterable, Identifiable {
     
     var title: String {
         switch self {
-        case .allTime:
-            return "All Time"
         case .last7Days:
             return "Last 7 Days"
         case .last30Days:
             return "Last 30 Days"
+        case .allTime:
+            return "All Time"
+      
         }
     }
     
     var numberOfDays: Int? {
         switch self {
-        case .allTime:
-            return nil
         case .last7Days:
             return 7
         case .last30Days:
             return 30
+        case .allTime:
+            return nil
+       
         }
     }
 }
@@ -45,7 +48,7 @@ final class StatisticsViewModel: ObservableObject {
     
     @Published private(set) var checkIns: [CheckIn] = []
     @Published var selectedSpace: JournalSpace = .personal
-    @Published var selectedPeriod: StatisticsPeriod = .allTime
+    @Published var selectedPeriod: StatisticsPeriod = .last7Days
     @Published private(set) var totalCheckIns: Int = 0
     
     private let evaluator = CheckInEvaluator()

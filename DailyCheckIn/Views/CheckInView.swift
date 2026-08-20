@@ -19,7 +19,7 @@ struct CheckInView: View {
     let isEditing: Bool
     let onSave: (CheckIn) -> Void
     
-    private let totalSteps = 3
+    private let totalSteps = 4
     
     init(
         space: JournalSpace,
@@ -134,6 +134,8 @@ struct CheckInView: View {
             metricsStep
             
         case 2:
+            energyLevelStep
+        case 3:
             reflectionStep
             
             
@@ -306,6 +308,33 @@ struct CheckInView: View {
         )
     }
     
+    private var energyLevelStep: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.section){
+            stepHeader(
+                title: "How are you doing?",
+                subtitle: "Rate your energy and stress level.",
+                systemImage: "chart.bar.fill"
+            )
+            
+            Spacer()
+            
+            ratingCard(
+                title: "Energy",
+                systemImage: "bolt.fill",
+                value: $viewModel.energyLevel,
+            )
+            
+            Spacer()
+            
+            
+            ratingCard(
+                title: "Stress",
+                systemImage: "waveform.path.ecg",
+                value: $viewModel.stressLevel,
+            )
+        }
+    }
+    
     private var metricsStep: some View {
         VStack(
             alignment: .leading,
@@ -336,26 +365,6 @@ struct CheckInView: View {
                     }
                 }
             }
-            Spacer()
-            stepHeader(
-                title: "How are you doing?",
-                subtitle: "Rate your energy and stress level.",
-                systemImage: "chart.bar.fill"
-            )
-            
-            ratingCard(
-                title: "Energy",
-                systemImage: "bolt.fill",
-                value: $viewModel.energyLevel,
-            )
-            
-            ratingCard(
-                title: "Stress",
-                systemImage: "waveform.path.ecg",
-                value: $viewModel.stressLevel,
-            )
-            
-            
         }
     }
     
@@ -933,7 +942,7 @@ struct CheckInView: View {
                             )
                             .frame(
                                 maxWidth: .infinity,
-                                minHeight: 36
+                                minHeight: 46
                             )
                             .background(
                                 value.wrappedValue >= level
@@ -1073,6 +1082,11 @@ struct CheckInView: View {
             return true
             
         case 2:
+                return viewModel.energyLevel >= 1 &&
+                       viewModel.energyLevel <= 5 &&
+                       viewModel.stressLevel >= 1 &&
+                       viewModel.stressLevel <= 5
+        case 3:
             return true
             
         default:

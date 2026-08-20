@@ -232,12 +232,14 @@ struct StatisticsView: View {
                             Image(checkIn.mood.chartImageName)
                                 .resizable()
                                 .scaledToFit()
+                                .scaleEffect(1.8)
+                                .opacity(0.7)
                                 
                         }.shadow(
                             color: .black.opacity(0.059),
                             radius: 4,
                             x: 0,
-                            y: 2
+                            y: 0
                         )
                       
                     }
