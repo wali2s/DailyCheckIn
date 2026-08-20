@@ -46,6 +46,17 @@ struct ContentView: View {
             .tag(0)
             
             NavigationStack {
+                MomentsView()
+            }
+            .tabItem {
+                Label(
+                    "Moments",
+                    systemImage: "sparkles"
+                )
+            }
+            .tag(1)
+            
+            NavigationStack {
                 HistoryView(viewModel: viewModel)
             }
             .tabItem {
@@ -54,7 +65,7 @@ struct ContentView: View {
                     systemImage: "clock.arrow.circlepath"
                 )
             }
-            .tag(1)
+            .tag(2)
             
             NavigationStack {
                 StatisticsView(
@@ -67,7 +78,7 @@ struct ContentView: View {
                     systemImage: "chart.bar.fill"
                 )
             }
-            .tag(2)
+            .tag(3)
             
             NavigationStack {
                 SettingsView(
@@ -81,7 +92,7 @@ struct ContentView: View {
                     systemImage: "gearshape.fill"
                 )
             }
-            .tag(3)
+            .tag(4)
         }
         .environment(
                 \.locale,
