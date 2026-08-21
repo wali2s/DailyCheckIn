@@ -234,7 +234,6 @@ struct StatisticsView: View {
                                 .scaledToFit()
                                 .scaleEffect(1.8)
                                 .opacity(0.7)
-                                .fontWeight(.semibold)
                                 
                         }.shadow(
                             color: .black.opacity(0.059),
