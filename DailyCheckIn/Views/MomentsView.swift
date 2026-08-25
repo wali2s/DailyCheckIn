@@ -1,4 +1,4 @@
-////
+//
 //  MomentsView.swift
 //  DailyCheckIn
 //
@@ -20,40 +20,52 @@ struct MomentsView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(
-                    alignment: .leading,
-                    spacing: AppSpacing.section
-                ) {
-                    
-                    // MARK: - Header
-                    VStack(
-                        alignment: .leading,
-                        spacing: AppSpacing.small
-                    ) {
-                        Text("Moments")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(AppColors.textPrimary)
-                        
-                        Text("What would you like to make time for today?")
-                            .font(.subheadline)
-                            .foregroundStyle(AppColors.textSecondary)
+            Group {
+                if viewModel.moments.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: AppSpacing.section) {
+                            headerView
+                            emptyStateView
+                        }
+                        .padding(.horizontal, AppSpacing.screenHorizontal)
+                        .padding(.vertical, AppSpacing.standard)
                     }
-                    
-                    // MARK: - Moments List
-                    if viewModel.moments.isEmpty {
-                        emptyStateView
-                    } else {
-                        VStack(spacing: AppSpacing.standard) {
-                            ForEach(viewModel.moments) { moment in
-                                momentCard(moment: moment)
-                            }
+                } else {
+                    List {
+                        Section {
+                            headerView
+                                .padding(.bottom, AppSpacing.small)
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: AppSpacing.standard, leading: AppSpacing.screenHorizontal, bottom: 0, trailing: AppSpacing.screenHorizontal))
+                        .listRowBackground(Color.clear)
+                        
+                        ForEach(viewModel.moments) { moment in
+                            momentCard(moment: moment)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    // Löschen Aktion (Rot)
+                                    Button(role: .destructive) {
+                                        withAnimation {
+                                            viewModel.deleteMoment(moment)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+
+                                    Button {
+                                        momentToEdit = moment
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: AppSpacing.extraSmall, leading: AppSpacing.screenHorizontal, bottom: AppSpacing.extraSmall, trailing: AppSpacing.screenHorizontal))
+                                .listRowBackground(Color.clear)
                         }
                     }
+                    .listStyle(.plain)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, AppSpacing.screenHorizontal)
-                .padding(.vertical, AppSpacing.standard)
             }
             .background(AppColors.warmCanvas)
             .navigationTitle("")
@@ -87,80 +99,95 @@ struct MomentsView: View {
         }
     }
     
+    // MARK: - Header Subview
+    private var headerView: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Text("Moments")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+            
+            Text("What would you like to make time for today?")
+                .font(.subheadline)
+                .foregroundStyle(AppColors.textSecondary)
+        }
+    }
+    
     // MARK: - Moment Card View
     private func momentCard(moment: Moment) -> some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            HStack {
-                Image(systemName: moment.iconName.isEmpty ? "sparkles" : moment.iconName)
-                    .font(.title2)
-                    .foregroundStyle(AppColors.accentMint)
+        HStack(spacing: AppSpacing.standard) {
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
                 
-                Spacer()
-                
-                Text(moment.period.rawValue.capitalized)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .padding(.horizontal, AppSpacing.small)
-                    .padding(.vertical, AppSpacing.extraSmall)
-                    .background(AppColors.surfaceSecondary.opacity(0.5))
-                    .clipShape(Capsule())
-
-                Menu {
-                    Button {
-                        momentToEdit = moment
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                    }
+                HStack {
+                    Image(systemName: moment.iconName.isEmpty ? "sparkles" : moment.iconName)
+                        .font(.title3)
+                        .foregroundStyle(AppColors.accentMint)
                     
-                    Button(role: .destructive) {
-                        withAnimation {
-                            viewModel.deleteMoment(moment)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(moment.title)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.textPrimary)
+                        
+                        if !moment.subtitle.isEmpty {
+                            Text(moment.subtitle)
+                                .font(.subheadline)
+                                .foregroundStyle(AppColors.textSecondary)
                         }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(AppColors.textSecondary)
-                        .padding(.leading, AppSpacing.extraSmall)
                 }
-            }
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text(moment.title)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppColors.textPrimary)
                 
-                if !moment.subtitle.isEmpty {
-                    Text(moment.subtitle)
-                        .font(.subheadline)
+                HStack {
+                    Image(systemName: "timer")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.primaryAction)
+                        
+
+                    Text("\(moment.targetMinutes) Min")
+                        .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundStyle(AppColors.textSecondary)
+                    
+                    Text(moment.period.rawValue.capitalized)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .padding(.horizontal, AppSpacing.small)
+                        .padding(.vertical, AppSpacing.extraSmall)
+                        .background(AppColors.surfaceSecondary.opacity(0.5))
+                        .clipShape(Capsule())
                 }
             }
             
+            Spacer()
+            
+            HStack(spacing: 6) {
+              
+            }
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     viewModel.toggleCompletion(for: moment)
                 }
             } label: {
-                Text(moment.isCompleted ? "Completed" : "Complete")
-                    .frame(maxWidth: .infinity)
+                Image(systemName: moment.isCompleted ? "pause.fill" : "play.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(moment.isCompleted ? AppColors.warmSurface : AppColors.primaryAction)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(moment.isCompleted ? AppColors.accentMint : AppColors.primaryAction.opacity(0.12))
+                    )
             }
-            .buttonStyle(
-                PrimaryButtonStyle(
-                    backgroundColor: moment.isCompleted ? AppColors.accentMint : AppColors.primaryAction
-                )
-            )
+            .buttonStyle(.plain)
+            
+            // Visual Indicator für Swipe-Geste
+            Image(systemName: "chevron.left")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundStyle(AppColors.textSecondary.opacity(0.3))
         }
         .padding(AppSpacing.cardPadding)
         .background(AppColors.warmSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
     
     // MARK: - Empty State
@@ -185,6 +212,7 @@ struct MomentsView: View {
         .appCardStyle(backgroundColor: AppColors.warmSurface)
     }
 }
+
 // MARK: - Preview
 #Preview("Default State") {
     MomentsView()

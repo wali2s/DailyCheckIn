@@ -2,19 +2,14 @@
 //  CreateMomentView.swift
 //  DailyCheckIn
 //
-//  Created by Wahid on 20.08.26.
-//
 
 import SwiftUI
-
-import Foundation
 
 struct MomentPreset: Identifiable, Hashable {
     let id = UUID()
     let title: String
     let iconName: String
 }
-
 enum CreationMode: String, CaseIterable, Identifiable {
     case presets = "Presets"
     case custom = "Custom"
@@ -47,7 +42,6 @@ enum IconCategory: String, CaseIterable, Identifiable {
     }
 }
 
-
 struct CreateMomentView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -59,7 +53,8 @@ struct CreateMomentView: View {
     
     // MARK: - Form States
     @State private var creationMode: CreationMode = .presets
-    @State private var selectedPeriod: MomentPeriod = .today
+    @State private var selectedRecurrenceType: RecurrenceType = .daily
+    @State private var selectedPeriod: MomentPeriod = .morning
     @State private var selectedPreset: MomentPreset?
     @State private var customTitle: String = ""
     @State private var selectedIconCategory: IconCategory = .health
@@ -68,7 +63,9 @@ struct CreateMomentView: View {
     @State private var targetMinutes: Int = 15
     @State private var selectedWeekdays: Set<Int> = [2, 4, 6]
     @State private var daysPerMonth: Int = 4
-
+    @State private var enableNotification: Bool = false
+    @State private var notificationTime: Date = Date()
+    
     private let weekdays = [
         (id: 2, label: "Monday"), (id: 3, label: "Tuesday"), (id: 4, label: "Wednesday"),
         (id: 5, label: "Thursday"), (id: 6, label: "Friday"), (id: 7, label: "Saturday"), (id: 1, label: "Sunday")
@@ -96,7 +93,6 @@ struct CreateMomentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // MARK: - Step Indicator
                 stepProgressHeader
                     .padding(.horizontal, AppSpacing.screenHorizontal)
                     .padding(.top, AppSpacing.standard)
@@ -104,7 +100,6 @@ struct CreateMomentView: View {
 
                 ScrollView {
                     VStack(spacing: AppSpacing.section) {
-                        // Dynamic Step Content
                         switch currentStep {
                         case 1:
                             stepOneSelectActivity
@@ -121,7 +116,6 @@ struct CreateMomentView: View {
                 }
                 .scrollIndicators(.hidden)
 
-                // MARK: - Bottom Navigation Controls
                 bottomActionBar
                     .padding(.horizontal, AppSpacing.screenHorizontal)
                     .padding(.vertical, AppSpacing.standard)
@@ -132,10 +126,8 @@ struct CreateMomentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundStyle(AppColors.textSecondary)
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(AppColors.textSecondary)
                 }
             }
             .onAppear {
@@ -144,7 +136,7 @@ struct CreateMomentView: View {
         }
     }
 
-    // MARK: - Step 1 View: Activity
+    // MARK: - Step 1
     private var stepOneSelectActivity: some View {
         VStack(alignment: .leading, spacing: AppSpacing.standard) {
             VStack(alignment: .leading, spacing: 4) {
@@ -172,30 +164,50 @@ struct CreateMomentView: View {
         }
     }
 
-    // MARK: - Step 2 View: Period
+    // MARK: - Step 2
     private var stepTwoSelectPeriod: some View {
         VStack(alignment: .leading, spacing: AppSpacing.standard) {
-            
-            // Titel
             VStack(alignment: .leading, spacing: 4) {
                 Text("Step 2: Frequency & Time")
                     .font(.headline)
                     .foregroundStyle(AppColors.textPrimary)
                 
-                Text("Set how often and how long you want to do this activity.")
+                Text("Set how often and when you want to do this activity.")
                     .font(.subheadline)
                     .foregroundStyle(AppColors.textSecondary)
             }
 
-            // 1. Intervall-Auswahl (Segmented / Buttons)
-            Picker("Period", selection: $selectedPeriod) {
-                ForEach(MomentPeriod.allCases) { period in
-                    Text(period.rawValue.capitalized).tag(period)
-                }
-            }
-            .pickerStyle(.segmented)
+            // Day Period Selection
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
+                Text("Time of Day")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(AppColors.textSecondary)
 
-            // 2. Dauer in Minuten (Stepper / Slider)
+                Picker("Period", selection: $selectedPeriod) {
+                    ForEach(MomentPeriod.allCases) { period in
+                        Text(period.rawValue).tag(period)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            // Recurrence Selection
+            VStack(alignment: .leading, spacing: AppSpacing.small) {
+                Text("Recurrence")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(AppColors.textSecondary)
+
+                Picker("Recurrence", selection: $selectedRecurrenceType) {
+                    ForEach(RecurrenceType.allCases) { recurrence in
+                        Text(recurrence.rawValue).tag(recurrence)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            // Duration
             VStack(alignment: .leading, spacing: AppSpacing.small) {
                 Text("Duration per Session")
                     .font(.caption)
@@ -215,21 +227,19 @@ struct CreateMomentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
             }
 
-            // 3. Dynamische Optionen je nach Zeitraum
-            switch selectedPeriod {
-            case .today: // Daily
+            switch selectedRecurrenceType {
+            case .daily:
                 Text("This activity will repeat daily.")
                     .font(.footnote)
                     .foregroundStyle(AppColors.textSecondary)
 
-            case .week:
+            case .weekly:
                 VStack(alignment: .leading, spacing: AppSpacing.small) {
                     Text("Select Days of the Week")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(AppColors.textSecondary)
 
-                    // 2-Spalten-Grid für die Wochentage
                     LazyVGrid(
                         columns: [
                             GridItem(.flexible(), spacing: AppSpacing.compact),
@@ -270,7 +280,7 @@ struct CreateMomentView: View {
                     }
                 }
 
-            case .month:
+            case .monthly:
                 VStack(alignment: .leading, spacing: AppSpacing.small) {
                     Text("Target Days per Month")
                         .font(.caption)
@@ -290,9 +300,47 @@ struct CreateMomentView: View {
                     .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
                 }
             }
+
+            if selectedRecurrenceType == .daily || selectedRecurrenceType == .weekly {
+                notificationCard
+            }
         }
     }
-    // MARK: - Step 3 View: Summary & Review
+
+    @ViewBuilder
+    private var notificationCard: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Toggle(isOn: $enableNotification) {
+                HStack {
+                    Image(systemName: "bell.fill")
+                        .foregroundStyle(AppColors.primaryAction)
+                    Text("Remind Me")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                }
+            }
+            .onChange(of: enableNotification) { _, newValue in
+                if newValue {
+                    NotificationManager.shared.requestAuthorization()
+                }
+            }
+
+            if enableNotification {
+                DatePicker(
+                    "Notification Time",
+                    selection: $notificationTime,
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.compact)
+                .padding(.top, 4)
+            }
+        }
+        .padding(.horizontal, AppSpacing.standard)
+        .padding(.vertical, 12)
+        .background(AppColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
+    }
+
+    // MARK: - Step 3
     private var stepThreeReviewAndSave: some View {
         VStack(spacing: AppSpacing.standard) {
             VStack(spacing: 4) {
@@ -305,7 +353,6 @@ struct CreateMomentView: View {
                     .foregroundStyle(AppColors.textSecondary)
             }
 
-            // Preview Card
             VStack(spacing: AppSpacing.standard) {
                 Image(systemName: selectedIconName)
                     .font(.system(size: 44))
@@ -315,14 +362,25 @@ struct CreateMomentView: View {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(AppColors.textPrimary)
                 
-                Text(selectedPeriod.rawValue.capitalized)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .padding(.horizontal, AppSpacing.standard)
-                    .padding(.vertical, AppSpacing.extraSmall)
-                    .background(AppColors.surfaceSecondary.opacity(0.5))
-                    .clipShape(Capsule())
+                HStack(spacing: 8) {
+                    Text(selectedPeriod.rawValue)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .padding(.horizontal, AppSpacing.standard)
+                        .padding(.vertical, AppSpacing.extraSmall)
+                        .background(AppColors.surfaceSecondary.opacity(0.5))
+                        .clipShape(Capsule())
+
+                    Text(selectedRecurrenceType.rawValue)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .padding(.horizontal, AppSpacing.standard)
+                        .padding(.vertical, AppSpacing.extraSmall)
+                        .background(AppColors.surfaceSecondary.opacity(0.5))
+                        .clipShape(Capsule())
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(AppSpacing.cardPadding)
@@ -331,7 +389,6 @@ struct CreateMomentView: View {
         }
     }
 
-    // MARK: - Progress Header Subview
     private var stepProgressHeader: some View {
         HStack(spacing: 8) {
             ForEach(1...3, id: \.self) { step in
@@ -356,7 +413,6 @@ struct CreateMomentView: View {
         }
     }
 
-    // MARK: - Bottom Action Controls
     private var bottomActionBar: some View {
         HStack(spacing: AppSpacing.standard) {
             if currentStep > 1 {
@@ -380,7 +436,6 @@ struct CreateMomentView: View {
         }
     }
 
-    // MARK: - Presets & Forms
     private var presetSelectionGrid: some View {
         LazyVGrid(columns: presetColumns, spacing: AppSpacing.compact) {
             ForEach(presets) { preset in
@@ -410,7 +465,6 @@ struct CreateMomentView: View {
         }
     }
     
-   
     private var customActivityForm: some View {
         VStack(alignment: .leading, spacing: AppSpacing.standard) {
             VStack(alignment: .leading, spacing: AppSpacing.small) {
@@ -483,7 +537,6 @@ struct CreateMomentView: View {
         }
     }
 
-    // MARK: - Computed Properties
     private var selectedTitle: String {
         creationMode == .presets ? (selectedPreset?.title ?? "") : customTitle.trimmingCharacters(in: .whitespaces)
     }
@@ -499,9 +552,9 @@ struct CreateMomentView: View {
         return false
     }
 
-    // MARK: - Actions
     private func setupEditStateIfNeeded() {
         guard let moment = momentToEdit else { return }
+        selectedRecurrenceType = moment.recurrence
         selectedPeriod = moment.period
         
         if let matchingPreset = presets.first(where: { $0.title == moment.title }) {
@@ -519,13 +572,24 @@ struct CreateMomentView: View {
             id: momentToEdit?.id ?? UUID(),
             title: selectedTitle,
             subtitle: momentToEdit?.subtitle ?? "",
+            iconName: selectedIconName,
             period: selectedPeriod,
             isCompleted: momentToEdit?.isCompleted ?? false,
-            iconName: selectedIconName,
-            targetMinutes: targetMinutes,
-            selectedWeekdays: selectedPeriod == .week ? selectedWeekdays : nil,
-            daysPerMonth: selectedPeriod == .month ? daysPerMonth : nil
+            recurrence: selectedRecurrenceType,
+            dailyTimes: [notificationTime],
+            selectedWeekdays: selectedRecurrenceType == .weekly ? selectedWeekdays : nil,
+            monthlyIntervalDays: selectedRecurrenceType == .monthly ? daysPerMonth : nil
         )
+
+        NotificationManager.shared.cancelNotification(for: updatedMoment.id)
+
+        if enableNotification && (selectedRecurrenceType == .daily || selectedRecurrenceType == .weekly) {
+            NotificationManager.shared.scheduleNotification(
+                for: updatedMoment,
+                time: notificationTime,
+                weekdays: selectedRecurrenceType == .weekly ? selectedWeekdays : nil
+            )
+        }
 
         onSave(updatedMoment)
         dismiss()

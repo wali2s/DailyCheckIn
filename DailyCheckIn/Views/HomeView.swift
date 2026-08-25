@@ -7,174 +7,124 @@
 
 import SwiftUI
 
+// MARK: - Space Color Palette
+
+private enum SpaceColors {
+    static let personalAccent = Color(red: 0.75, green: 0.55, blue: 0.20)
+    static let professionalAccent = Color(red: 0.15, green: 0.38, blue: 0.45)
+}
+
 struct HomeView: View {
-    
+
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
     @State private var selectedSpace: JournalSpace?
-    
+
     var body: some View {
         ScrollView {
-            VStack(
-                alignment: .leading,
-                spacing: AppSpacing.section
-            ) {
+            VStack(alignment: .leading, spacing: 24) {
                 headerSection
                 spacesSection
             }
-            .padding(.horizontal, AppSpacing.screenHorizontal)
-            .padding(.vertical, AppSpacing.standard)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
         }
         .scrollIndicators(.hidden)
-        .background(AppColors.warmCanvas)
+        .background(AppColors.warmCanvas.ignoresSafeArea())
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(
-                placement: .navigationBarTrailing
-            ) {
-                Text(
-                    Date.now,
-                    style: .date
-                )
-                .font(.caption)
-                .foregroundStyle(AppColors.textSecondary)
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Text(Date.now, style: .date)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(AppColors.warmSurface)
+                    .clipShape(Capsule())
             }
         }
-        .navigationDestination(
-            item: $selectedSpace
-        ) { space in
+        .navigationDestination(item: $selectedSpace) { space in
             CheckInView(
                 space: space,
-                existingCheckIn: viewModel.checkIn(
-                    for: space
-                )
+                existingCheckIn: viewModel.checkIn(for: space)
             ) { newCheckIn in
                 viewModel.addCheckIn(newCheckIn)
                 selectedSpace = nil
             }
         }
         .onReceive(
-            NotificationCenter.default.publisher(
-                for: .checkInReminderSelected
-            )
+            NotificationCenter.default.publisher(for: .checkInReminderSelected)
         ) { notification in
-            guard let reminderType =
-                notification.object as? String
-            else {
-                return
-            }
-            
+            guard let reminderType = notification.object as? String else { return }
+
             switch reminderType {
             case "personal":
                 selectedSpace = .personal
-                
             case "professional":
                 selectedSpace = .professional
-                
             default:
                 break
             }
         }
     }
-    
+
+    // MARK: - Header Section
+
     private var headerSection: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            HStack(
-                alignment: .center,
-                spacing: AppSpacing.standard
-            ) {
-                VStack(
-                    alignment: .leading,
-                    spacing: 4
-                ) {
-                    Text("Hi, \(settingsViewModel.displayName)!")
-                        .font(.system(
-                            size: 34,
-                            weight: .bold,
-                            design: .rounded
-                        ))
-                        .foregroundStyle(
-                            AppColors.textPrimary
-                        )
-                    
-                    Text("How are you feeling today?")
-                        .font(.title3)
-                        .fontWeight(.medium)
-                        .foregroundStyle(
-                            AppColors.textPrimary
-                        )
-                }
-                
-                Spacer()
-                
-                profileButton
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Hi, \(settingsViewModel.displayName)")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+
+                Text("How are you feeling today?")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(AppColors.textSecondary)
             }
-            
-            Text(
-                "Take a moment to check in with yourself."
-            )
-            .font(.subheadline)
-            .foregroundStyle(
-                AppColors.textSecondary
-            )
+
+            Spacer()
+
+            profileButton
         }
-        .frame(
-            maxWidth: .infinity,
-            alignment: .leading
-        )
     }
-    
+
     private var profileButton: some View {
         Button {
-            // Wird im nächsten Schritt mit Profile/Settings verbunden.
+            // Profile / Settings action
         } label: {
             ZStack {
                 Circle()
-                    .fill(
-                        AppColors.accentYellow.opacity(0.35)
-                    )
-                    .frame(
-                        width: 52,
-                        height: 52
-                    )
-                
+                    .fill(AppColors.textPrimary.opacity(0.06))
+                    .frame(width: 48, height: 48)
+
                 Image(systemName: "person.fill")
-                    .font(.title3)
-                    .foregroundStyle(
-                        AppColors.textPrimary
-                    )
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(SpaceColors.personalAccent).opacity(0.6)
+                    .scaleEffect(1.35)
+                    
             }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
-        .accessibilityHint(
-            "Opens your profile settings."
-        )
+        .accessibilityHint("Opens your profile settings.")
     }
-    
+
+    // MARK: - Spaces Section
+
     private var spacesSection: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
+        VStack(alignment: .leading, spacing: 18) {
             Text("Your Spaces")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.headline)
                 .foregroundStyle(AppColors.textPrimary)
-            
+
             ForEach(JournalSpace.allCases) { space in
                 SpaceCheckInCard(
                     space: space,
-                    checkIn: viewModel.checkIn(
-                        for: space
-                    ),
-                    streak: viewModel.currentStreak(
-                        for: space
-                    ),
+                    checkIn: viewModel.checkIn(for: space),
                     onCheckIn: {
                         selectedSpace = space
                     }
@@ -184,351 +134,236 @@ struct HomeView: View {
     }
 }
 
-private struct DailyProgressCard: View {
-    
-    let completedSpaces: Int
-    let totalSpaces: Int
-    let progress: Double
-    let message: String
-    
-    var body: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            HStack {
-                HStack(
-                    spacing: AppSpacing.small
-                ) {
-                    Image(
-                        systemName: "checkmark.circle.fill"
-                    )
-                    .font(.title3)
-                    .foregroundStyle(
-                        AppColors.accentBlue
-                    )
-                    
-                    Text("Today's Progress")
-                        .font(.headline)
-                        .foregroundStyle(
-                            AppColors.textPrimary
-                        )
-                }
-                
-                Spacer()
-                
-                Text(
-                    "\(completedSpaces)/\(totalSpaces)"
-                )
-                .font(.headline)
-                .foregroundStyle(
-                    AppColors.textSecondary
-                )
-            }
-            
-            ProgressView(
-                value: progress,
-                total: 1.0
-            )
-            .tint(AppColors.accentBlue)
-            .scaleEffect(
-                x: 1,
-                y: 1.5,
-                anchor: .center
-            )
-            
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(
-                    AppColors.textSecondary
-                )
-        }
-        .appCardStyle(
-            backgroundColor: AppColors.warmSurface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
-}
-
-private struct StreakCard: View {
-    
-    let streak: Int
-    
-    var body: some View {
-        HStack(
-            spacing: AppSpacing.standard
-        ) {
-            ZStack {
-                Circle()
-                    .fill(
-                        AppColors.accentYellow
-                            .opacity(0.25)
-                    )
-                    .frame(
-                        width: 52,
-                        height: 52
-                    )
-                
-                Image(systemName: "flame.fill")
-                    .font(.title2)
-                    .foregroundStyle(
-                        AppColors.accentYellow
-                    )
-            }
-            
-            VStack(
-                alignment: .leading,
-                spacing: 4
-            ) {
-                Text("Current Streak")
-                    .font(.headline)
-                    .foregroundStyle(
-                        AppColors.textPrimary
-                    )
-                
-                if streak == 0 {
-                    Text("Start your streak today")
-                        .font(.subheadline)
-                        .foregroundStyle(
-                            AppColors.textSecondary
-                        )
-                } else if streak == 1 {
-                    Text("1 day")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(
-                            AppColors.textPrimary
-                        )
-                } else {
-                    Text("\(streak) days")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(
-                            AppColors.textPrimary
-                        )
-                }
-            }
-            
-            Spacer()
-        }
-        .appCardStyle(
-            backgroundColor: AppColors.warmSurface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
-}
+// MARK: - Harmonious & Colored Space Check-In Card
 
 private struct SpaceCheckInCard: View {
-    
+
     let space: JournalSpace
     let checkIn: CheckIn?
-    let streak: Int
     let onCheckIn: () -> Void
-    
-    private var cardBackgroundColor: Color {
-        AppColors.warmSurface
-    }
-    
-    private var iconBackgroundColor: Color {
+
+    // Zuweisung der 2 Akzentfarben je nach Space
+    private var accentColor: Color {
         switch space {
         case .personal:
-            return AppColors.accentMint
+            return SpaceColors.personalAccent
         case .professional:
-            return AppColors.accentBlue
+            return SpaceColors.professionalAccent
         }
     }
-    
+
     var body: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            header
-            
-            if let checkIn {
-                existingCheckInContent(
-                    checkIn
-                )
-            } else {
-                emptyCheckInContent
+        Button(action: onCheckIn) {
+            VStack(alignment: .leading, spacing: 20) {
+                topHeader
+
+                if let checkIn {
+                    completedContent(checkIn)
+                } else {
+                    pendingContent
+                }
             }
-        }
-        .appCardStyle(
-            backgroundColor: cardBackgroundColor,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-        .contentShape(
-            RoundedRectangle(
-                cornerRadius: AppCornerRadius.large,
-                style: .continuous
+            .padding(20)
+            .background(
+                ZStack {
+                    AppColors.warmSurface
+
+                    // Dezenter Farbverlauf mit der jeweiligen Akzentfarbe
+                    LinearGradient(
+                        colors: [
+                            accentColor.opacity(checkIn != nil ? 0.08 : 0.04),
+                            Color.clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
             )
-        )
-        .onTapGesture {
-            onCheckIn()
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(
+                        accentColor.opacity(checkIn != nil ? 0.3 : 0.12),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.025), radius: 12, x: 0, y: 4)
         }
+        .buttonStyle(PressableCardStyle())
+        .accessibilityIdentifier("spaceCard.\(space.rawValue)")
     }
-    
-    private var header: some View {
-        HStack(
-            alignment: .top,
-            spacing: AppSpacing.standard
-        ) {
+
+    // MARK: - Subviews
+
+    private var topHeader: some View {
+        HStack(alignment: .top, spacing: 14) {
+            // Icon Badge mit Akzentfarbe
             ZStack {
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
-                )
-                .fill(iconBackgroundColor)
-                .frame(
-                    width: 48,
-                    height: 48
-                )
-                
+                Circle()
+                    .fill(accentColor.opacity(0.12))
+                    .frame(width: 52, height: 52)
+
                 Image(systemName: space.iconName)
                     .font(.title3)
-                    .foregroundStyle(.black)
+                    .fontWeight(.bold)
+                    .foregroundStyle(accentColor)
             }
-            
-            VStack(
-                alignment: .leading,
-                spacing: 4
-            ) {
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(space.title)
-                    .font(.headline)
-                    .foregroundStyle(
-                        AppColors.textPrimary
-                    )
-                
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppColors.textPrimary)
+
                 Text(space.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(
-                        AppColors.textSecondary
-                    )
+                    .foregroundStyle(AppColors.textSecondary)
             }
-            
+
             Spacer()
+
+            // Status Pill mit Akzentfarbe
+            HStack(spacing: 5) {
+                Image(systemName: checkIn != nil ? "checkmark" : "sparkles")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+
+                Text(checkIn != nil ? "Completed" : "Pending")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+            }
+            .foregroundStyle(checkIn != nil ? accentColor : AppColors.textSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(accentColor.opacity(checkIn != nil ? 0.15 : 0.06))
+            )
         }
     }
-    
-    private func existingCheckInContent(
-        _ checkIn: CheckIn
-    ) -> some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            HStack(
-                spacing: AppSpacing.standard
-            ) {
+
+    private func completedContent(_ checkIn: CheckIn) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Divider()
+                .background(accentColor.opacity(0.12))
+
+            // Mood & Note Content
+            HStack(spacing: 14) {
                 Image(systemName: checkIn.mood.imageName)
-                        .foregroundStyle(checkIn.mood.iconColor)
-                    .font(.system(size: 42))
-                
-                VStack(
-                    alignment: .leading,
-                    spacing: 4
-                ) {
+                    .font(.system(size: 32))
+                    .foregroundStyle(checkIn.mood.iconColor)
+
+                VStack(alignment: .leading, spacing: 2) {
                     Text(checkIn.mood.title)
                         .font(.headline)
-                        .foregroundStyle(
-                            AppColors.textPrimary
-                        )
-                    
-                    if checkIn.note.isEmpty {
-                        Text("No note added.")
-                            .font(.subheadline)
-                            .foregroundStyle(
-                                AppColors.textSecondary
-                            )
-                    } else {
-                        Text(checkIn.note)
-                            .font(.subheadline)
-                            .foregroundStyle(
-                                AppColors.textSecondary
-                            )
-                            .lineLimit(2)
-                    }
+                        .foregroundStyle(AppColors.textPrimary)
+
+                    Text(checkIn.note.isEmpty ? "No note added for today." : checkIn.note)
+                        .font(.subheadline)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .lineLimit(2)
                 }
-                
+
                 Spacer()
             }
-            
-            HStack {
-                Label(
-                    "Energy \(checkIn.energyLevel)/5",
-                    systemImage: "bolt.fill"
+
+            // Floating Metric Badges
+            HStack(spacing: 8) {
+                FloatingMetricBadge(
+                    icon: "bolt.fill",
+                    label: "Energy",
+                    value: "\(checkIn.energyLevel)/5"
                 )
-                
+
+                FloatingMetricBadge(
+                    icon: "waveform.path.ecg",
+                    label: "Stress",
+                    value: "\(checkIn.stressLevel)/5"
+                )
+
                 Spacer()
-                
-                Label(
-                    "Stress \(checkIn.stressLevel)/5",
-                    systemImage: "waveform.path.ecg"
-                )
-            }
-            .font(.caption)
-            .foregroundStyle(
-                AppColors.textSecondary
-            )
-            
-            HStack {
-                Label(
-                    "\(streak) day streak",
-                    systemImage: "flame.fill"
-                )
-                .font(.caption)
-                .foregroundStyle(
-                    AppColors.accentYellow
-                )
-                
-                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(accentColor.opacity(0.7))
             }
         }
     }
-    
-    private var emptyCheckInContent: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            Text("No check-in yet")
-                .font(.headline)
-                .foregroundStyle(
-                    AppColors.textPrimary
-                )
-            
-            Text(
-                "Take a moment to reflect on your day."
-            )
-            .font(.subheadline)
-            .foregroundStyle(
-                AppColors.textSecondary
-            )
-            
-            Button("Create Check-In") {
-                onCheckIn()
+
+    private var pendingContent: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Ready to reflect?")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textPrimary)
+
+                Text("Tap anywhere to start your daily check-in.")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
             }
-            .buttonStyle(
-                PrimaryButtonStyle(
-                    backgroundColor: iconBackgroundColor
-                )
-            )
-            .accessibilityIdentifier(
-                "createCheckInButton.\(space.rawValue)"
-            )
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(accentColor)
+                    .frame(width: 38, height: 38)
+
+                Image(systemName: "arrow.right")
+                    .font(.footnote)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+            }
         }
+        .padding(.top, 2)
     }
 }
 
-#Preview("Home - New Design") {
+// MARK: - Floating Metric Badge
+
+private struct FloatingMetricBadge: View {
+    let icon: String
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(AppColors.textSecondary)
+
+            Text("\(label) \(value)")
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.textPrimary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(AppColors.warmCanvas)
+        .clipShape(Capsule())
+    }
+}
+
+// MARK: - Custom Pressable Button Style
+
+private struct PressableCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Home View - Two Accents") {
     NavigationStack {
         HomeView(
             viewModel: HomeViewModel(
-                storageService:
-                    PreviewCheckInStorageService()
+                storageService: PreviewCheckInStorageService()
             ),
             settingsViewModel: SettingsViewModel()
         )

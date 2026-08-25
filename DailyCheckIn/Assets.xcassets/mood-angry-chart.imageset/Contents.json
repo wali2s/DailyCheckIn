@@ -3,6 +3,10 @@
     {
       "filename" : "angry.png",
       "idiom" : "universal"
+    },
+    {
+      "filename" : "mood-angry.png",
+      "idiom" : "universal"
     }
   ],
   "info" : {

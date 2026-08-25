@@ -31,8 +31,8 @@ final class UserDefaultsMomentStorageService: MomentStorageService {
                 Moment(
                     title: "20 min Guitar",
                     subtitle: "Take some time for yourself.",
-                    period: .today,
-                    iconName: "guitars.fill"
+                    iconName: "guitars.fill",
+                    period: .morning
                 )
             ]
         }

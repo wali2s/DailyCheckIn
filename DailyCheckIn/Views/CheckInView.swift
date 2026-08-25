@@ -16,6 +16,9 @@ struct CheckInView: View {
     @State private var currentStep = 0
     @State private var moodScrollPosition: Mood?
     
+    // Die Timer-Variablen 'showDots' und 'hideDotsTask' werden entfernt,
+    // da wir die Sichtbarkeit geometrisch steuern.
+    
     let isEditing: Bool
     let onSave: (CheckIn) -> Void
     
@@ -103,11 +106,8 @@ struct CheckInView: View {
                 id: \.self
             ) { step in
                 Capsule()
-                    .fill(
-                        step <= currentStep
-                        ? Color.white
-                        : AppColors.surfaceSecondary.opacity(0.9)
-                    )
+                    .fill(step == currentStep ? AppColors.primaryAction.opacity(0.8) : AppColors.surfaceSecondary.opacity(0.9))
+                    
                     .frame(height: 4)
             }
         }
@@ -135,9 +135,9 @@ struct CheckInView: View {
             
         case 2:
             energyLevelStep
+            
         case 3:
             reflectionStep
-            
             
         default:
             EmptyView()
@@ -167,63 +167,41 @@ struct CheckInView: View {
             let viewportWidth = geometry.size.width
 
             ScrollView(.horizontal) {
-                LazyHStack(
-                    spacing: cardSpacing
-                ) {
+                LazyHStack(spacing: cardSpacing) {
                     ForEach(Mood.allCases) { mood in
                         GeometryReader { cardGeometry in
-                            let cardMidX = cardGeometry.frame(
-                                in: .named("moodCarousel")
-                            ).midX
-
+                            let cardMidX = cardGeometry.frame(in: .named("moodCarousel")).midX
                             let viewportMidX = viewportWidth / 2
+                            let distance = abs(cardMidX - viewportMidX)
 
-                            let distance = abs(
-                                cardMidX - viewportMidX
-                            )
-
-                            let progress = min(
-                                distance / (cardWidth + cardSpacing),
-                                1
-                            )
+                            // 0 = Perfekt in der Mitte (eingerastet)
+                            // 1 = Außerhalb der Mitte (wird gerade gewischt)
+                            let progress = min(distance / (cardWidth + cardSpacing), 1)
 
                             let scale = 1 - (progress * 0.20)
                             let opacity = 1 - (progress * 0.48)
 
                             verticalMoodCard(
                                 mood: mood,
-                                isSelected: mood == viewModel.mood
+                                isSelected: mood == viewModel.mood,
+                                dragProgress: progress
                             )
                             .scaleEffect(scale)
                             .opacity(opacity)
-                            .animation(
-                                .easeOut(duration: 0.18),
-                                value: progress
-                            )
+                            .animation(.easeOut(duration: 0.18), value: progress)
                             .onTapGesture {
-                                withAnimation(
-                                    .spring(
-                                        response: 0.35,
-                                        dampingFraction: 0.82
-                                    )
-                                ) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                     viewModel.mood = mood
                                     moodScrollPosition = mood
                                 }
                             }
                         }
-                        .frame(
-                            width: cardWidth,
-                            height: cardHeight
-                        )
+                        .frame(width: cardWidth, height: cardHeight)
                         .id(mood)
                     }
                 }
                 .scrollTargetLayout()
-                .padding(
-                    .horizontal,
-                    (viewportWidth - cardWidth) / 2
-                )
+                .padding(.horizontal, (viewportWidth - cardWidth) / 2)
             }
             .coordinateSpace(name: "moodCarousel")
             .scrollIndicators(.hidden)
@@ -233,10 +211,7 @@ struct CheckInView: View {
                 moodScrollPosition = viewModel.mood
             }
             .onChange(of: moodScrollPosition) { _, mood in
-                guard let mood else {
-                    return
-                }
-
+                guard let mood else { return }
                 withAnimation(.easeInOut(duration: 0.35)) {
                     viewModel.mood = mood
                 }
@@ -244,69 +219,80 @@ struct CheckInView: View {
         }
         .frame(height: 360)
     }
+    
+    // Die Timer-gesteuerte Hilfsmethode 'triggerDotsAutoDisappear' wird entfernt.
+    
+    
     private func verticalMoodCard(
         mood: Mood,
-        isSelected: Bool
+        isSelected: Bool,
+        dragProgress: CGFloat
     ) -> some View {
-        VStack(
-            spacing: 14
-        ) {
+       
+        let dotsOpacity: Double = 1.0
+
+        return VStack(spacing: 14) {
             Spacer()
 
             ZStack {
                 Circle()
                     .fill(mood.backgroundColor.opacity(0.42))
-                    .frame(width: 270, height: 270)
+                    .frame(width: 260, height: 260)
                     .blur(radius: 22)
 
                 Image(mood.imageName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 340, height:340)
+                    .frame(width: 290, height: 290)
                     .mask {
                         RadialGradient(
                             colors: [
                                 .black,
                                 .black,
-                                .black.opacity(0.92),
-                                .black.opacity(0.45),
+                                .black.opacity(0.42),
+                                .black.opacity(0.15),
                                 .clear
                             ],
                             center: .center,
                             startRadius: 90,
-                            endRadius:190
+                            endRadius: 190
                         )
                     }
+                    .cornerRadius(333)
+                    .opacity(0.8)
             }
-            .frame(width: 270, height: 270)
+            .frame(width: 260, height: 250)
 
             Text(mood.title)
-                .font(.system(
-                    size: 22,
-                    weight: .semibold,
-                    design: .rounded
-                ))
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
                 .foregroundStyle(mood.titleColor)
-                .opacity(
-                    isSelected ? 1.0 : 0.72
-                )
+                .opacity(isSelected ? 1.0 : 0.72)
+
+            // Paginierungs-Punkte
+            HStack(spacing: 6) {
+                ForEach(Mood.allCases) { item in
+                    Circle()
+                        .fill(
+                            item == mood
+                            ? mood.titleColor
+                            : mood.titleColor.opacity(0.25)
+                        )
+                        .frame(
+                            width: item == mood ? 8 : 6,
+                            height: item == mood ? 8 : 6
+                        )
+                }
+            }
+            .padding(.top, -6)
+            .opacity(dotsOpacity) // Steuerung über dotsOpacity statt (isSelected && showDots)
+            .animation(.easeInOut(duration: 0.4), value: dotsOpacity) // Sanftes Verblassen beim Anhalten
 
             Spacer()
         }
-        .frame(
-            maxWidth: .infinity,
-            maxHeight: .infinity
-        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(mood.title)
-        .accessibilityValue(
-            isSelected ? "Selected" : "Not selected"
-        )
-        .accessibilityHint(
-            "Swipe horizontally to change the selected mood."
-        )
     }
+    
     
     private var energyLevelStep: some View {
         VStack(alignment: .leading, spacing: AppSpacing.section){
@@ -321,16 +307,15 @@ struct CheckInView: View {
             ratingCard(
                 title: "Energy",
                 systemImage: "bolt.fill",
-                value: $viewModel.energyLevel,
+                value: $viewModel.energyLevel
             )
             
             Spacer()
             
-            
             ratingCard(
                 title: "Stress",
                 systemImage: "waveform.path.ecg",
-                value: $viewModel.stressLevel,
+                value: $viewModel.stressLevel
             )
         }
     }
@@ -351,9 +336,7 @@ struct CheckInView: View {
                 spacing: 10,
                 rowSpacing: 10
             ) {
-                
                 switch viewModel.space {
-                    
                 case .personal:
                     ForEach(viewModel.availablePersonalFactors) { factor in
                         personalFactorButton(factor)
@@ -576,22 +559,122 @@ struct CheckInView: View {
     }
     
     private var reflectionStep: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.section
-        ) {
+        VStack(alignment: .leading, spacing: AppSpacing.section) {
             stepHeader(
-                title: "Take a moment to reflect",
-                subtitle: "Add a note or a few tags if you like.",
-                systemImage: "text.quote"
+                title: "How do you feel in detail?",
+                subtitle: "Use the sliders for a quick check-in or write a short note.",
+                systemImage: "slider.horizontal.3"
             )
             
-            reflectionPromptCard
-            
-            thoughtsCard
-            
-            tagsCard
+            Picker("Input Method", selection: $viewModel.reflectionType) {
+                ForEach(ReflectionInputType.allCases) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, 4)
+
+            // Dynamische Anzeige basierend auf der Auswahl
+            if viewModel.reflectionType == .sliders {
+                sentimentSlidersCard
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            } else {
+                thoughtsCard
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.reflectionType)
+    }
+
+    private var sentimentSlidersCard: some View {
+        VStack(spacing: AppSpacing.standard) {
+            singleSliderRow(
+                title: "Focus",
+                systemImage: "brain.head.profile",
+                value: $viewModel.focusLevel,
+                lowLabel: "Distracted",
+                highLabel: "Focused"
+            )
+            
+            Divider().opacity(0.3)
+            
+            singleSliderRow(
+                title: "Social Battery",
+                systemImage: "battery.100.bolt",
+                value: $viewModel.socialBattery,
+                lowLabel: "Empty",
+                highLabel: "Full"
+            )
+            
+            Divider().opacity(0.3)
+            
+            singleSliderRow(
+                title: "Physical Tension",
+                systemImage: "figure.walk",
+                value: $viewModel.physicalTension,
+                lowLabel: "Tense/Tired",
+                highLabel: "Relaxed"
+            )
+        }
+        .appCardStyle(
+            backgroundColor: AppColors.surface,
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
+        )
+    }
+
+    private func singleSliderRow(
+        title: String,
+        systemImage: String,
+        value: Binding<Double>,
+        lowLabel: String,
+        highLabel: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                Text("\(Int(value.wrappedValue.rounded()))/5")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            
+            Slider(value: value, in: 1...5, step: 1)
+                .tint(AppColors.primaryAction.opacity(0.8))
+            
+            HStack {
+                Text(lowLabel)
+                Spacer()
+                Text(highLabel)
+            }
+            .font(.caption2)
+            .foregroundStyle(AppColors.textSecondary)
+        }.appCardStyle(backgroundColor: viewModel.mood.backgroundColor.opacity(0.2))
+    }
+
+    private var thoughtsCard: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.standard) {
+            Label("GDetailed Check", systemImage: "note.text")
+                .font(.headline)
+                .foregroundStyle(AppColors.textPrimary)
+            
+            TextField("What's on your mind? (optional)", text: $viewModel.note, axis: .vertical)
+                .font(.body)
+                .textFieldStyle(.plain)
+                .lineLimit(3...6)
+                .padding(12)
+                .background(reflectionFieldColor.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.small, style: .continuous))
+                .submitLabel(.done)
+        }
+        .appCardStyle(
+            backgroundColor: AppColors.warmCanvas,
+            cornerRadius: AppCornerRadius.large,
+            padding: AppSpacing.cardPadding
+        )
     }
     
     private var reflectionPrompt: String {
@@ -671,116 +754,6 @@ struct CheckInView: View {
         )
     }
     
-    private var thoughtsCard: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            Label(
-                "Your Thoughts",
-                systemImage: "note.text"
-            )
-            .font(.headline)
-            .foregroundStyle(
-                AppColors.textPrimary
-            ).opacity(0.9)
-            
-            TextField(
-                "Write a short note...",
-                text: $viewModel.note,
-                axis: .vertical
-            )
-            .font(.body)
-            .textFieldStyle(.plain)
-            .lineLimit(4...8)
-            .padding(12)
-            .background {
-                reflectionFieldColor
-            }
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
-                )
-                .stroke(
-                    viewModel.mood.titleColor.opacity(0.18),
-                    lineWidth: 1
-                )
-            }
-            .animation(
-                .easeInOut(duration: 0.35),
-                value: viewModel.mood
-            )
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
-                )
-            )
-            .accessibilityIdentifier(
-                "checkInNoteTextField"
-            )
-        }
-        .appCardStyle(
-            backgroundColor: AppColors.surface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
-    
-    private var tagsCard: some View {
-        VStack(
-            alignment: .leading,
-            spacing: AppSpacing.standard
-        ) {
-            Label(
-                "Tags",
-                systemImage: "tag.fill"
-            )
-            .font(.headline)
-            .foregroundStyle(
-                AppColors.textPrimary
-            ).opacity(0.9)
-            
-            TextField(
-                "Focus, Learning, Exercise",
-                text: $viewModel.tagsText
-            )
-            .font(.body)
-            .textFieldStyle(.plain)
-            .textInputAutocapitalization(.words)
-            .autocorrectionDisabled()
-            .padding(12)
-            .background {
-                reflectionFieldColor
-            }
-            .overlay {
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
-                )
-                .stroke(
-                    viewModel.mood.titleColor.opacity(0.18),
-                    lineWidth: 1
-                )
-            }
-            .animation(
-                .easeInOut(duration: 0.35),
-                value: viewModel.mood
-            )
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: AppCornerRadius.small,
-                    style: .continuous
-                )
-            )
-        }
-        .appCardStyle(
-            backgroundColor: AppColors.warmSurface,
-            cornerRadius: AppCornerRadius.large,
-            padding: AppSpacing.cardPadding
-        )
-    }
     
     private func stepHeader(
         title: String,
@@ -942,11 +915,11 @@ struct CheckInView: View {
                             )
                             .frame(
                                 maxWidth: .infinity,
-                                minHeight: 46
+                                minHeight: 36
                             )
                             .background(
                                 value.wrappedValue >= level
-                                ? .black.opacity(0.76)
+                                ? AppColors.primaryAction.opacity(0.9)
                                 : viewModel.mood.backgroundColor.opacity(0.65)
                             )
                             .clipShape(
@@ -991,8 +964,6 @@ struct CheckInView: View {
         VStack(
             spacing: AppSpacing.small
         ) {
-           
-
             Button {
                 if isLastStep {
                     saveCheckIn()
@@ -1082,10 +1053,10 @@ struct CheckInView: View {
             return true
             
         case 2:
-                return viewModel.energyLevel >= 1 &&
-                       viewModel.energyLevel <= 5 &&
-                       viewModel.stressLevel >= 1 &&
-                       viewModel.stressLevel <= 5
+            return viewModel.energyLevel >= 1 &&
+            viewModel.energyLevel <= 5 &&
+            viewModel.stressLevel >= 1 &&
+            viewModel.stressLevel <= 5
         case 3:
             return true
             

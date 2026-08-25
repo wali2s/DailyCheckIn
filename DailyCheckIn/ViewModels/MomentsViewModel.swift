@@ -2,8 +2,6 @@
 //  MomentsViewModel.swift
 //  DailyCheckIn
 //
-//  Created by Wahid on 21.08.26.
-//
 
 import Foundation
 import Combine

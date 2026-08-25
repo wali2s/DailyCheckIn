@@ -8,6 +8,14 @@
 import Foundation
 import Combine
 
+enum ReflectionInputType: String, CaseIterable, Identifiable {
+    case sliders = "Gefühls-Check"
+    case note = "Notiz"
+    
+    var id: String { self.rawValue }
+}
+
+
 final class CheckInViewModel: ObservableObject {
     
     let space: JournalSpace
@@ -89,13 +97,17 @@ final class CheckInViewModel: ObservableObject {
         }
     }
     
+    @Published var reflectionType: ReflectionInputType = .sliders
     @Published var mood: Mood
     @Published var energyLevel: Int
     @Published var stressLevel: Int
     @Published var personalFactors: Set<PersonalFactor>
     @Published var professionalFactors: Set<ProfessionalFactor>
     @Published var note: String
-    @Published var tagsText: String
+    
+    @Published var focusLevel: Double = 3.0
+    @Published var socialBattery: Double = 3.0
+    @Published var physicalTension: Double = 3.0
     
     private let checkInID: UUID
     private let checkInDate: Date
@@ -119,9 +131,7 @@ final class CheckInViewModel: ObservableObject {
             existingCheckIn?.professionalFactors ?? []
         )
         self.note = existingCheckIn?.note ?? ""
-        self.tagsText = existingCheckIn?.tags.joined(
-            separator: ", "
-        ) ?? ""
+       
     }
     
     func makeCheckIn() -> CheckIn {
@@ -133,22 +143,8 @@ final class CheckInViewModel: ObservableObject {
             energyLevel: energyLevel,
             stressLevel: stressLevel,
             note: note,
-            tags: parsedTags,
             personalFactors: Array(personalFactors),
             professionalFactors: Array(professionalFactors)
         )
-    }
-    
-    private var parsedTags: [String] {
-        tagsText
-            .split(separator: ",")
-            .map {
-                $0.trimmingCharacters(
-                    in: .whitespacesAndNewlines
-                )
-            }
-            .filter {
-                !$0.isEmpty
-            }
     }
 }
