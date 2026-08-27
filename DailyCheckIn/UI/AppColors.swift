@@ -99,4 +99,10 @@ enum AppColors {
         green: 0.999,
         blue: 0.995
     )
+    
+    static let pauseButton = Color(
+        red: 0.992,
+        green: 0.388,
+        blue: 0.378
+    )
 }

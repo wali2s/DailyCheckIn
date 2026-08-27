@@ -13,6 +13,8 @@ final class ActivityViewModel: ObservableObject {
     private let storageService: ActivityStorageService
     
     @Published private(set) var completions: [ActivityCompletion] = []
+    
+    
     init(
         storageService: ActivityStorageService = UserDefaultsActivityStorageService()
     ) {
@@ -54,9 +56,8 @@ final class ActivityViewModel: ObservableObject {
         for activity: Activity,
         on date: Date = Date()
     ) {
-        
         let calendar = Calendar.current
-        
+
         if let index = completions.firstIndex(
             where: { completion in
                 completion.ActivityID == activity.id &&
@@ -75,10 +76,15 @@ final class ActivityViewModel: ObservableObject {
                 )
             )
         }
-        
+
         storageService.saveCompletions(
             completions
         )
+        
+        print("Completion toggled:")
+        print("Activity:", activity.title)
+        print("Completed:", isCompleted(activity, on: date))
+        print("Total completions:", completions.count)
     }
     
     // MARK: - CRUD

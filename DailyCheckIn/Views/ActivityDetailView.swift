@@ -15,12 +15,7 @@ struct ActivityDetailView: View {
     
     @Environment(\.dismiss) private var dismiss
     
-    private var todayIsCompleted: Bool {
-        viewModel.isCompleted(
-            activity,
-            on: Date()
-        )
-    }
+    @State private var todayIsCompleted = false
     
     private var weekDates: [Date] {
         let calendar = Calendar.current
@@ -41,6 +36,23 @@ struct ActivityDetailView: View {
                 to: weekStart
             )
         }
+    }
+        
+    init(
+        activity: Activity,
+        viewModel: ActivityViewModel,
+        onCompletionToggle: @escaping () -> Void
+    ) {
+        self.activity = activity
+        self.viewModel = viewModel
+        self.onCompletionToggle = onCompletionToggle
+        
+        _todayIsCompleted = State(
+            initialValue: viewModel.isCompleted(
+                activity,
+                on: Date()
+            )
+        )
     }
     
     var body: some View {
@@ -101,6 +113,7 @@ struct ActivityDetailView: View {
                                 dampingFraction: 0.7
                             )
                         ) {
+                            todayIsCompleted.toggle()
                             onCompletionToggle()
                         }
                     } label: {
@@ -277,12 +290,15 @@ struct ActivityDetailView: View {
                             for: Date()
                         )
                     
-                    let completed =
-                        !isFuture &&
-                        viewModel.isCompleted(
-                            activity,
-                            on: date
-                        )
+                    let completed = Calendar.current.isDate(
+                        date,
+                        inSameDayAs: Date()
+                    )
+                    ? todayIsCompleted
+                    : viewModel.isCompleted(
+                        activity,
+                        on: date
+                    )
                     
                     VStack(spacing: 8) {
                         

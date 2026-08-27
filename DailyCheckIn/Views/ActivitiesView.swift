@@ -105,12 +105,13 @@ struct ActivitiesView: View {
                 }
             }
             .sheet(item: $selectedActivity) { activity in
-               ActivityDetailView(
-                activity: activity,
+                ActivityDetailView(
+                    activity: activity,
                     viewModel: viewModel,
                     onCompletionToggle: {
                         viewModel.toggleCompletion(
-                            for: activity
+                            for: activity,
+                            on: Date()
                         )
                     }
                 )
@@ -202,7 +203,7 @@ struct ActivitiesView: View {
                 )
                 .foregroundStyle(
                     activity.isActive
-                    ? AppColors.primaryAction
+                    ? AppColors.pauseButton.opacity(0.8)
                     : AppColors.accentMint
                 )
                 .frame(
@@ -213,7 +214,7 @@ struct ActivitiesView: View {
                     Circle()
                         .fill(
                             activity.isActive
-                            ? AppColors.primaryAction.opacity(0.12)
+                            ? AppColors.pauseButton.opacity(0.12)
                             : AppColors.accentMint.opacity(0.18)
                         )
                 }
