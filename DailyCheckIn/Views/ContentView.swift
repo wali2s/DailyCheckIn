@@ -46,11 +46,11 @@ struct ContentView: View {
             .tag(0)
             
             NavigationStack {
-                MomentsView()
+                ActivitiesView()
             }
             .tabItem {
                 Label(
-                    "Moments",
+                    "Activities",
                     systemImage: "sparkles"
                 )
             }

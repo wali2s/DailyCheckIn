@@ -14,18 +14,27 @@ protocol CheckInStorageService {
 
 final class UserDefaultsCheckInStorageService: CheckInStorageService {
     
-    private let userDeafauls: UserDefaults
+    private let userDefaults: UserDefaults
     private let storageKey = "saved_check-ins"
     
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private let encoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
+
+    private let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
     
     init(userDefaults: UserDefaults = .standard) {
-        self.userDeafauls = userDefaults
+        self.userDefaults = userDefaults
     }
     
     func loadCheckIns() -> [CheckIn] {
-        guard let data = userDeafauls.data(forKey: storageKey) else {
+        guard let data = userDefaults.data(forKey: storageKey) else {
             return []
         }
         
@@ -40,9 +49,10 @@ final class UserDefaultsCheckInStorageService: CheckInStorageService {
     func saveCheckIns(_ checkIns: [CheckIn]) {
         do {
             let data = try encoder.encode(checkIns)
-            userDeafauls.set(data, forKey: storageKey)
+            userDefaults.set(data, forKey: storageKey)
         } catch {
             print("Failed to save check-ins: \(error)")
         }
     }
 }
+

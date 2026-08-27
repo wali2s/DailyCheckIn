@@ -1,5 +1,5 @@
 //
-//  MomentPeriod.swift
+//  ActivityPeriod.swift
 //  DailyCheckIn
 //
 //  Created by Wahid on 24.08.26.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum MomentPeriod: String, Codable, CaseIterable, Identifiable {
+enum ActivityPeriod: String, Codable, CaseIterable, Identifiable {
     case morning = "Morning"
     case afternoon = "Afternoon"
     case evening = "Evening"

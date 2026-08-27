@@ -140,60 +140,62 @@ struct StatisticsView: View {
 
     // MARK: - Last 7 Days Chart (mit Mood-Icon IM Balken)
 
-    private var weeklyMoodChart: some View {
-        Chart {
-            ForEach(weeklyMoodChartDays) { day in
-                if let checkIn = day.checkIn {
-                    BarMark(
-                        x: .value("Day", day.date, unit: .day),
-                        y: .value("Mood", checkIn.mood.score)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                checkIn.mood.chartColor,
-                                checkIn.mood.chartColor.opacity(0.4)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
+
+        private var weeklyMoodChart: some View {
+            Chart {
+                ForEach(weeklyMoodChartDays) { day in
+                    if let checkIn = day.checkIn {
+                        let moodScore = checkIn.mood.score
+                        let moodColor = checkIn.mood.chartColor
+                        
+                        BarMark(
+                            x: .value("Day", day.date, unit: .day),
+                            y: .value("Mood", moodScore)
                         )
-                    )
-                    .clipShape(Capsule())
-                    .annotation(position: .overlay, alignment: .top) {
-                        Image(checkIn.mood.chartImageName)
-                            .resizable()
-                            .scaledToFit()
-                            .scaleEffect(1.4)
-                            .frame(width: 24, height: 24)
-                            .padding(.top, 6) // Kleiner Abstand zur oberen Kante des Balkens
+                        .foregroundStyle(moodColor.opacity(0.20))
+                        .clipShape(Capsule())
+                        .annotation(position: .top, alignment: .center, spacing: -28) {
+                            // 2. Kräftiger runder Kopf mit Emoji an der Spitze
+                            ZStack {
+                                Circle()
+                                    .fill(moodColor.opacity(0.85))
+                                    .frame(width: 28, height: 28)
+                                    .scaleEffect(1.2)
+                                
+                                Image(checkIn.mood.chartImageName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 22, height: 22)
+                                    .scaleEffect(2.2)
+                            }.opacity(0.6)
+                        }
+                    } else {
+                        BarMark(
+                            x: .value("Day", day.date, unit: .day),
+                            y: .value("Mood", 0.5)
+                        )
+                        .foregroundStyle(AppColors.textSecondary.opacity(0.08))
+                        .clipShape(Capsule())
                     }
-                } else {
-                    BarMark(
-                        x: .value("Day", day.date, unit: .day),
-                        y: .value("Mood", 0.5)
-                    )
-                    .foregroundStyle(AppColors.textSecondary.opacity(0.08))
-                    .clipShape(Capsule())
                 }
             }
-        }
-        .chartYScale(domain: 0...5.5)
-        .chartYAxis {
-            AxisMarks(values: [1, 2, 3, 4, 5]) { _ in
-                AxisGridLine().foregroundStyle(AppColors.textSecondary.opacity(0.08))
-                AxisValueLabel().foregroundStyle(AppColors.textSecondary.opacity(0.6))
+            .chartYScale(domain: 0...5.5)
+            .chartYAxis {
+                AxisMarks(values: [1, 2, 3, 4, 5]) { _ in
+                    AxisGridLine().foregroundStyle(AppColors.textSecondary.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(AppColors.textSecondary.opacity(0.6))
+                }
             }
-        }
-        .chartXAxis {
-            AxisMarks(values: .stride(by: .day)) { _ in
-                AxisValueLabel(format: .dateTime.weekday(.abbreviated))
-                    .foregroundStyle(AppColors.textSecondary)
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day)) { _ in
+                    AxisValueLabel(format: .dateTime.weekday(.abbreviated))
+                        .foregroundStyle(AppColors.textSecondary)
+                }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Mood trend for the last seven days")
+            .accessibilityValue(moodChartAccessibilityValue)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Mood trend for the last seven days")
-        .accessibilityValue(moodChartAccessibilityValue)
-    }
     
     
     // MARK: - Line Chart (30 Days & All-Time)
@@ -266,97 +268,106 @@ struct StatisticsView: View {
 
     // MARK: - Daily Averages
 
-     private var metricsSection: some View {
-         Section("Daily Averages") {
-             
-             MetricSummaryRow(
-                 title: "Daily Score",
-                 value: viewModel.formattedAverageDailyScore,
-                 progress: viewModel.averageDailyScore,
-                 tint: AppColors.accentMint,
-                 systemImage: "star.circle.fill"
-             )
-             
-             MetricSummaryRow(
-                 title: "Average Mood",
-                 value: viewModel.formattedAverage(
-                     viewModel.averageMood
-                 ),
-                 progress: viewModel.averageMood,
-                 tint: AppColors.accentMint,
-                 systemImage: "chart.line.uptrend.xyaxis"
-             )
+    private var metricsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Daily Averages", systemImage: "gauge.with.dots.needle.bottom.0percent")
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+            }
 
-             MetricSummaryRow(
-                 title: "Average Energy",
-                 value: viewModel.formattedAverage(
-                     viewModel.averageEnergy
-                 ),
-                 progress: viewModel.averageEnergy,
-                 tint: AppColors.accentYellow,
-                 systemImage: "bolt.fill"
-             )
+            MetricSummaryRow(
+                title: "Daily Score",
+                value: viewModel.formattedAverageDailyScore,
+                progress: viewModel.averageDailyScore,
+                tint: AppColors.accentMint,
+                systemImage: "star.circle.fill"
+            )
 
-             MetricSummaryRow(
-                 title: "Average Stress",
-                 value: viewModel.formattedAverage(
-                     viewModel.averageStress
-                 ),
-                 progress: viewModel.averageStress,
-                 tint: AppColors.accentPink,
-                 systemImage: "waveform.path.ecg"
-             )
-         }
-         .listRowBackground(AppColors.warmSurface)
-     }
+            MetricSummaryRow(
+                title: "Average Mood",
+                value: viewModel.formattedAverage(
+                    viewModel.averageMood
+                ),
+                progress: viewModel.averageMood,
+                tint: AppColors.accentMint,
+                systemImage: "chart.line.uptrend.xyaxis"
+            )
 
-     private struct MetricSummaryRow: View {
+            MetricSummaryRow(
+                title: "Average Energy",
+                value: viewModel.formattedAverage(
+                    viewModel.averageEnergy
+                ),
+                progress: viewModel.averageEnergy,
+                tint: AppColors.accentYellow,
+                systemImage: "bolt.fill"
+            )
 
-         let title: String
-         let value: String
-         let progress: Double
-         let tint: Color
-         let systemImage: String
+            MetricSummaryRow(
+                title: "Average Stress",
+                value: viewModel.formattedAverage(
+                    viewModel.averageStress
+                ),
+                progress: viewModel.averageStress,
+                tint: AppColors.accentPink,
+                systemImage: "waveform.path.ecg"
+            )
+        }
+        .padding(16)
+        .background(AppColors.warmSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard, style: .continuous))
+        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 2)
+    }
 
-         var body: some View {
-             VStack(
-                 alignment: .leading,
-                 spacing: 8
-             ) {
-                 HStack(
-                     spacing: AppSpacing.small
-                 ) {
-                     Image(systemName: systemImage)
-                         .foregroundStyle(tint)
-                         .frame(width: 22)
+    private struct MetricSummaryRow: View {
 
-                     Text(title)
-                         .font(.subheadline)
-                         .foregroundStyle(
-                             AppColors.textPrimary
-                         )
+        let title: String
+        let value: String
+        let progress: Double
+        let tint: Color
+        let systemImage: String
 
-                     Spacer()
+        var body: some View {
+            VStack(
+                alignment: .leading,
+                spacing: 8
+            ) {
+                HStack(
+                    spacing: AppSpacing.small
+                ) {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(tint)
+                        .frame(width: 22)
 
-                     Text(value)
-                         .font(.subheadline)
-                         .fontWeight(.semibold)
-                         .foregroundStyle(
-                             AppColors.textPrimary
-                         )
-                 }
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
 
-                 ProgressView(
-                     value: progress,
-                     total: 5
-                 )
-                 .tint(tint)
-                 .accessibilityLabel(title)
-                 .accessibilityValue(value)
-             }
-             .padding(.vertical, 6)
-         }
-     }
+                    Spacer()
+
+                    Text(value)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                }
+
+                ProgressView(
+                    value: progress,
+                    total: 5
+                )
+                .tint(tint)
+                .accessibilityLabel(title)
+                .accessibilityValue(value)
+            }
+            .padding(.vertical, 6)
+        }
+    }
     // MARK: - Check-In Summary Card
 
     private var summaryCard: some View {
@@ -454,3 +465,4 @@ struct StatisticsView: View {
         return "Mood changed from \(firstMood) to \(lastMood)"
     }
 }
+

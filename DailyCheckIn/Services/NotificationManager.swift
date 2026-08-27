@@ -22,33 +22,31 @@ class NotificationManager {
         }
     }
 
-    // Alias für CreateMomentView
-    func scheduleNotification(for moment: Moment, time: Date, weekdays: Set<Int>?) {
-        var updatedMoment = moment
-        updatedMoment.dailyTimes = [time]
+    func scheduleNotification(for activity: Activity, time: Date, weekdays: Set<Int>?) {
+        var updatedActivity = activity
+        updatedActivity.dailyTimes = [time]
         if let weekdays = weekdays {
-            updatedMoment.selectedWeekdays = weekdays
+            updatedActivity.selectedWeekdays = weekdays
         }
-        scheduleNotifications(for: updatedMoment)
+        scheduleNotifications(for: updatedActivity)
     }
 
-    // Hauptmethode
-    func scheduleNotifications(for moment: Moment) {
-        cancelNotifications(for: moment)
+    func scheduleNotifications(for activity: Activity) {
+        cancelNotifications(for: activity)
         
         let center = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
-        content.title = moment.title
-        content.body = moment.subtitle.isEmpty ? "Time for your moment!" : moment.subtitle
+        content.title = activity.title
+        content.body = activity.subtitle.isEmpty ? "Time for your activity!" : activity.subtitle
         content.sound = .default
 
-        switch moment.recurrence {
+        switch activity.recurrence {
         case .daily:
-            for (index, time) in moment.dailyTimes.enumerated() {
+            for (index, time) in activity.dailyTimes.enumerated() {
                 let components = Calendar.current.dateComponents([.hour, .minute], from: time)
                 let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
                 let request = UNNotificationRequest(
-                    identifier: "\(moment.id.uuidString)_daily_\(index)",
+                    identifier: "\(activity.id.uuidString)_daily_\(index)",
                     content: content,
                     trigger: trigger
                 )
@@ -56,10 +54,10 @@ class NotificationManager {
             }
 
         case .weekly:
-            let time = moment.dailyTimes.first ?? Date()
+            let time = activity.dailyTimes.first ?? Date()
             let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: time)
 
-            for day in moment.selectedWeekdays {
+            for day in activity.selectedWeekdays {
                 var components = DateComponents()
                 components.weekday = day
                 components.hour = timeComponents.hour
@@ -67,7 +65,7 @@ class NotificationManager {
 
                 let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
                 let request = UNNotificationRequest(
-                    identifier: "\(moment.id.uuidString)_weekly_\(day)",
+                    identifier: "\(activity.id.uuidString)_weekly_\(day)",
                     content: content,
                     trigger: trigger
                 )
@@ -75,10 +73,10 @@ class NotificationManager {
             }
 
         case .monthly:
-            let interval = TimeInterval(moment.monthlyIntervalDays * 86400)
+            let interval = TimeInterval(activity.monthlyIntervalDays * 86400)
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: true)
             let request = UNNotificationRequest(
-                identifier: "\(moment.id.uuidString)_monthly",
+                identifier: "\(activity.id.uuidString)_monthly",
                 content: content,
                 trigger: trigger
             )
@@ -87,16 +85,16 @@ class NotificationManager {
     }
 
     // Aliase zum Löschen
-    func cancelNotification(for momentID: UUID) {
+    func cancelNotification(for activityID: UUID) {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let idsToRemove = requests
-                .filter { $0.identifier.starts(with: momentID.uuidString) }
+                .filter { $0.identifier.starts(with: activityID.uuidString) }
                 .map { $0.identifier }
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: idsToRemove)
         }
     }
 
-    func cancelNotifications(for moment: Moment) {
-        cancelNotification(for: moment.id)
+    func cancelNotifications(for activity: Activity) {
+        cancelNotification(for: activity.id)
     }
 }

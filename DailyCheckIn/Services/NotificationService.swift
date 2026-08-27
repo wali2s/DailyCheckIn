@@ -54,7 +54,7 @@ final class NotificationService:
         scheduleReminder(
             identifier: personalReminderIdentifier,
             title: "Personal Check-In",
-            body: "Take a moment to reflect on your personal day.",
+            body: "Take a activity to reflect on your personal day.",
             reminderType: "personal",
             hour: hour,
             minute: minute

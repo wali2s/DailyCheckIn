@@ -1,11 +1,11 @@
 //
-//  CreateMomentView.swift
+//  CreateActivityView.swift
 //  DailyCheckIn
 //
 
 import SwiftUI
 
-struct MomentPreset: Identifiable, Hashable {
+struct ActivityPreset: Identifiable, Hashable {
     let id = UUID()
     let title: String
     let iconName: String
@@ -42,11 +42,11 @@ enum IconCategory: String, CaseIterable, Identifiable {
     }
 }
 
-struct CreateMomentView: View {
+struct CreateActivityView: View {
     @Environment(\.dismiss) private var dismiss
 
-    var momentToEdit: Moment?
-    var onSave: (Moment) -> Void
+    var activityToEdit: Activity?
+    var onSave: (Activity) -> Void
 
     // MARK: - Navigation / Step State
     @State private var currentStep: Int = 1
@@ -54,8 +54,8 @@ struct CreateMomentView: View {
     // MARK: - Form States
     @State private var creationMode: CreationMode = .presets
     @State private var selectedRecurrenceType: RecurrenceType = .daily
-    @State private var selectedPeriod: MomentPeriod = .morning
-    @State private var selectedPreset: MomentPreset?
+    @State private var selectedPeriod: ActivityPeriod = .morning
+    @State private var selectedPreset: ActivityPreset?
     @State private var customTitle: String = ""
     @State private var selectedIconCategory: IconCategory = .health
     @State private var selectedCustomIcon: String = "star.fill"
@@ -72,15 +72,15 @@ struct CreateMomentView: View {
     ]
 
     // MARK: - Presets
-    private let presets: [MomentPreset] = [
-        MomentPreset(title: "Meditation", iconName: "brain.head.profile"),
-        MomentPreset(title: "Workout", iconName: "figure.run"),
-        MomentPreset(title: "Drink Water", iconName: "drop.fill"),
-        MomentPreset(title: "Reading", iconName: "book.fill"),
-        MomentPreset(title: "Walk", iconName: "figure.walk"),
-        MomentPreset(title: "Journaling", iconName: "pencil.line"),
-        MomentPreset(title: "Focus Time", iconName: "timer"),
-        MomentPreset(title: "Sleep", iconName: "bed.double.fill")
+    private let presets: [ActivityPreset] = [
+        ActivityPreset(title: "Meditation", iconName: "brain.head.profile"),
+        ActivityPreset(title: "Workout", iconName: "figure.run"),
+        ActivityPreset(title: "Drink Water", iconName: "drop.fill"),
+        ActivityPreset(title: "Reading", iconName: "book.fill"),
+        ActivityPreset(title: "Walk", iconName: "figure.walk"),
+        ActivityPreset(title: "Journaling", iconName: "pencil.line"),
+        ActivityPreset(title: "Focus Time", iconName: "timer"),
+        ActivityPreset(title: "Sleep", iconName: "bed.double.fill")
     ]
 
     private let presetColumns = [
@@ -122,7 +122,7 @@ struct CreateMomentView: View {
                     .background(AppColors.warmSurface)
             }
             .background(AppColors.warmSurface.ignoresSafeArea())
-            .navigationTitle(momentToEdit == nil ? "New Moment" : "Edit Moment")
+            .navigationTitle(activityToEdit == nil ? "New Activity" : "Edit Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -185,7 +185,7 @@ struct CreateMomentView: View {
                     .foregroundStyle(AppColors.textSecondary)
 
                 Picker("Period", selection: $selectedPeriod) {
-                    ForEach(MomentPeriod.allCases) { period in
+                    ForEach(ActivityPeriod.allCases) { period in
                         Text(period.rawValue).tag(period)
                     }
                 }
@@ -348,7 +348,7 @@ struct CreateMomentView: View {
                     .font(.headline)
                     .foregroundStyle(AppColors.textPrimary)
                 
-                Text("Review your new moment before adding it.")
+                Text("Review your new activity before adding it.")
                     .font(.subheadline)
                     .foregroundStyle(AppColors.textSecondary)
             }
@@ -423,11 +423,11 @@ struct CreateMomentView: View {
                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppColors.surfaceSecondary))
             }
 
-            Button(currentStep == 3 ? (momentToEdit == nil ? "Create Moment" : "Save Changes") : "Next") {
+            Button(currentStep == 3 ? (activityToEdit == nil ? "Create Activity" : "Save Changes") : "Next") {
                 if currentStep < 3 {
                     withAnimation { currentStep += 1 }
                 } else {
-                    saveMoment()
+                    saveActivity()
                 }
             }
             .buttonStyle(PrimaryButtonStyle(backgroundColor: AppColors.primaryAction))
@@ -553,45 +553,52 @@ struct CreateMomentView: View {
     }
 
     private func setupEditStateIfNeeded() {
-        guard let moment = momentToEdit else { return }
-        selectedRecurrenceType = moment.recurrence
-        selectedPeriod = moment.period
+        guard let activity = activityToEdit else { return }
+        selectedRecurrenceType = activity.recurrence
+        selectedPeriod = activity.period
         
-        if let matchingPreset = presets.first(where: { $0.title == moment.title }) {
+        if let matchingPreset = presets.first(where: { $0.title == activity.title }) {
             creationMode = .presets
             selectedPreset = matchingPreset
         } else {
             creationMode = .custom
-            customTitle = moment.title
-            selectedCustomIcon = moment.iconName.isEmpty ? "star.fill" : moment.iconName
+            customTitle = activity.title
+            selectedCustomIcon = activity.iconName.isEmpty ? "star.fill" : activity.iconName
         }
     }
 
-    private func saveMoment() {
-        let updatedMoment = Moment(
-            id: momentToEdit?.id ?? UUID(),
+    private func saveActivity() {
+        let updatedActivity = Activity(
+            id: activityToEdit?.id ?? UUID(),
             title: selectedTitle,
-            subtitle: momentToEdit?.subtitle ?? "",
+            subtitle: activityToEdit?.subtitle ?? "",
             iconName: selectedIconName,
             period: selectedPeriod,
-            isCompleted: momentToEdit?.isCompleted ?? false,
             recurrence: selectedRecurrenceType,
+            targetMinutes: targetMinutes,
             dailyTimes: [notificationTime],
-            selectedWeekdays: selectedRecurrenceType == .weekly ? selectedWeekdays : nil,
-            monthlyIntervalDays: selectedRecurrenceType == .monthly ? daysPerMonth : nil
+            selectedWeekdays: selectedRecurrenceType == .weekly
+                ? selectedWeekdays
+                : nil,
+            monthlyIntervalDays: selectedRecurrenceType == .monthly
+                ? daysPerMonth
+                : nil,
+            isActive: true,
+            notificationsEnabled: enableNotification
         )
 
-        NotificationManager.shared.cancelNotification(for: updatedMoment.id)
+        NotificationManager.shared.cancelNotification(for: updatedActivity.id)
 
         if enableNotification && (selectedRecurrenceType == .daily || selectedRecurrenceType == .weekly) {
             NotificationManager.shared.scheduleNotification(
-                for: updatedMoment,
+                for: updatedActivity,
                 time: notificationTime,
                 weekdays: selectedRecurrenceType == .weekly ? selectedWeekdays : nil
             )
         }
 
-        onSave(updatedMoment)
+        onSave(updatedActivity)
         dismiss()
     }
 }
+

@@ -1,5 +1,5 @@
 //
-//  MomentsView.swift
+//  ActivityView.swift
 //  DailyCheckIn
 //
 //  Created by Wahid on 20.08.26.
@@ -7,21 +7,22 @@
 
 import SwiftUI
 
-struct MomentsView: View {
+struct ActivitiesView: View {
     
-    @StateObject private var viewModel: MomentsViewModel
+    @StateObject private var viewModel: ActivityViewModel
     
     @State private var showingCreateSheet = false
-    @State private var momentToEdit: Moment?
+    @State private var activityToEdit: Activity?
+    @State private var selectedActivity: Activity?
     
-    init(viewModel: MomentsViewModel = MomentsViewModel()) {
+    init(viewModel: ActivityViewModel = ActivityViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
     
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.moments.isEmpty {
+                if viewModel.activities.isEmpty {
                     ScrollView {
                         VStack(alignment: .leading, spacing: AppSpacing.section) {
                             headerView
@@ -40,20 +41,26 @@ struct MomentsView: View {
                         .listRowInsets(EdgeInsets(top: AppSpacing.standard, leading: AppSpacing.screenHorizontal, bottom: 0, trailing: AppSpacing.screenHorizontal))
                         .listRowBackground(Color.clear)
                         
-                        ForEach(viewModel.moments) { moment in
-                            momentCard(moment: moment)
+                        Section {
+                            thisWeekSection
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: AppSpacing.extraSmall, leading: AppSpacing.screenHorizontal, bottom: AppSpacing.standard, trailing: AppSpacing.screenHorizontal))
+                        .listRowBackground(Color.clear)
+                        
+                        ForEach(viewModel.activities) { activity in
+                            activityCard(activity: activity)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    // Löschen Aktion (Rot)
                                     Button(role: .destructive) {
                                         withAnimation {
-                                            viewModel.deleteMoment(moment)
+                                            viewModel.deleteActivity(activity)
                                         }
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
 
                                     Button {
-                                        momentToEdit = moment
+                                        activityToEdit = activity
                                     } label: {
                                         Label("Edit", systemImage: "pencil")
                                     }
@@ -65,6 +72,7 @@ struct MomentsView: View {
                         }
                     }
                     .listStyle(.plain)
+                    
                 }
             }
             .background(AppColors.warmCanvas)
@@ -83,18 +91,29 @@ struct MomentsView: View {
                 }
             }
             .sheet(isPresented: $showingCreateSheet) {
-                CreateMomentView { newMoment in
+                CreateActivityView { newActivity in
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        viewModel.addMoment(newMoment)
+                        viewModel.addActivity(newActivity)
                     }
                 }
             }
-            .sheet(item: $momentToEdit) { moment in
-                CreateMomentView(momentToEdit: moment) { updatedMoment in
+            .sheet(item: $activityToEdit) { activity in
+                CreateActivityView(activityToEdit: activity) { updateActivity in
                     withAnimation {
-                        viewModel.updateMoment(updatedMoment)
+                        viewModel.updateactivity(updateActivity)
                     }
                 }
+            }
+            .sheet(item: $selectedActivity) { activity in
+               ActivityDetailView(
+                activity: activity,
+                    viewModel: viewModel,
+                    onCompletionToggle: {
+                        viewModel.toggleCompletion(
+                            for: activity
+                        )
+                    }
+                )
             }
         }
     }
@@ -102,7 +121,7 @@ struct MomentsView: View {
     // MARK: - Header Subview
     private var headerView: some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
-            Text("Moments")
+            Text("Activity")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
             
@@ -112,23 +131,23 @@ struct MomentsView: View {
         }
     }
     
-    // MARK: - Moment Card View
-    private func momentCard(moment: Moment) -> some View {
+    // MARK: - Activity Card View
+    private func activityCard(activity: Activity) -> some View {
         HStack(spacing: AppSpacing.standard) {
             VStack(alignment: .leading, spacing: AppSpacing.small) {
                 
                 HStack {
-                    Image(systemName: moment.iconName.isEmpty ? "sparkles" : moment.iconName)
+                    Image(systemName: activity.iconName.isEmpty ? "sparkles" : activity.iconName)
                         .font(.title3)
                         .foregroundStyle(AppColors.accentMint)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(moment.title)
+                        Text(activity.title)
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(AppColors.textPrimary)
                         
-                        if !moment.subtitle.isEmpty {
-                            Text(moment.subtitle)
+                        if !activity.subtitle.isEmpty {
+                            Text(activity.subtitle)
                                 .font(.subheadline)
                                 .foregroundStyle(AppColors.textSecondary)
                         }
@@ -141,12 +160,12 @@ struct MomentsView: View {
                         .foregroundStyle(AppColors.primaryAction)
                         
 
-                    Text("\(moment.targetMinutes) Min")
+                    Text("\(activity.targetMinutes) Min")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(AppColors.textSecondary)
                     
-                    Text(moment.period.rawValue.capitalized)
+                    Text(activity.period.rawValue.capitalized)
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(AppColors.textSecondary)
@@ -159,27 +178,49 @@ struct MomentsView: View {
             
             Spacer()
             
-            HStack(spacing: 6) {
-              
-            }
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    viewModel.toggleCompletion(for: moment)
+                withAnimation(
+                    .spring(
+                        response: 0.3,
+                        dampingFraction: 0.7
+                    )
+                ) {
+                    viewModel.toggleActive(activity)
                 }
             } label: {
-                Image(systemName: moment.isCompleted ? "pause.fill" : "play.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(moment.isCompleted ? AppColors.warmSurface : AppColors.primaryAction)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(moment.isCompleted ? AppColors.accentMint : AppColors.primaryAction.opacity(0.12))
+                
+                Image(
+                    systemName: activity.isActive
+                    ? "pause.fill"
+                    : "play.fill"
+                )
+                .font(
+                    .system(
+                        size: 17,
+                        weight: .bold
                     )
+                )
+                .foregroundStyle(
+                    activity.isActive
+                    ? AppColors.primaryAction
+                    : AppColors.accentMint
+                )
+                .frame(
+                    width: 44,
+                    height: 44
+                )
+                .background {
+                    Circle()
+                        .fill(
+                            activity.isActive
+                            ? AppColors.primaryAction.opacity(0.12)
+                            : AppColors.accentMint.opacity(0.18)
+                        )
+                }
             }
             .buttonStyle(.plain)
             
-            // Visual Indicator für Swipe-Geste
-            Image(systemName: "chevron.left")
+            Image(systemName: "chevron.right")
                 .font(.caption2)
                 .fontWeight(.bold)
                 .foregroundStyle(AppColors.textSecondary.opacity(0.3))
@@ -188,6 +229,109 @@ struct MomentsView: View {
         .background(AppColors.warmSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+        .contentShape(
+            RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
+        )
+        .onTapGesture {
+            selectedActivity = activity
+        }
+    }
+    
+    // MARK: - This Week
+
+    private var thisWeekSection: some View {
+        
+        let completed = viewModel.weeklyCompletedCount()
+
+        let total = viewModel.weeklyTargetCount()
+
+        let progress: Double = total > 0
+            ? Double(completed) / Double(total)
+            : 0
+        
+        return VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
+            
+            Text("This Week")
+                .font(
+                    .system(
+                        size: 24,
+                        weight: .bold,
+                        design: .rounded
+                    )
+                )
+                .foregroundStyle(
+                    AppColors.textPrimary
+                )
+            
+            VStack(
+                alignment: .leading,
+                spacing: AppSpacing.standard
+            ) {
+                
+                HStack {
+                    
+                    VStack(
+                        alignment: .leading,
+                        spacing: 4
+                    ) {
+                        Text(
+                            "\(completed) of \(total) activities"
+                        )
+                        .font(.headline)
+                        .foregroundStyle(
+                            AppColors.textPrimary
+                        )
+                        
+                        Text(
+                            total == 0
+                            ? "Add a activity for this week."
+                            : "Keep making time for yourself."
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(
+                            AppColors.textSecondary
+                        )
+                    }
+                    
+                    Spacer()
+                    
+                    Text("\(Int(progress * 100))%")
+                        .font(
+                            .system(
+                                size: 26,
+                                weight: .bold,
+                                design: .rounded
+                            )
+                        )
+                        .foregroundStyle(
+                            AppColors.primaryAction
+                        )
+                }
+                
+                ProgressView(
+                    value: progress,
+                    total: 1
+                )
+                .tint(
+                    AppColors.primaryAction
+                )
+            }
+            .padding(
+                AppSpacing.cardPadding
+            )
+            .background(
+                AppColors.warmSurface
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.large,
+                    style: .continuous
+                )
+            )
+        }
     }
     
     // MARK: - Empty State
@@ -197,7 +341,7 @@ struct MomentsView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(AppColors.textSecondary)
             
-            Text("No moments planned yet")
+            Text("No activities planned yet")
                 .font(.headline)
                 .foregroundStyle(AppColors.textPrimary)
             
@@ -215,10 +359,10 @@ struct MomentsView: View {
 
 // MARK: - Preview
 #Preview("Default State") {
-    MomentsView()
+    ActivitiesView()
 }
 
 #Preview("Dark Mode") {
-    MomentsView()
+    ActivitiesView()
         .preferredColorScheme(.dark)
 }

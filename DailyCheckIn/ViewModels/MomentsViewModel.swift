@@ -1,57 +1,306 @@
 //
-//  MomentsViewModel.swift
+//  ActivityViewModel.swift
 //  DailyCheckIn
 //
 
 import Foundation
 import Combine
 
-final class MomentsViewModel: ObservableObject {
+final class ActivityViewModel: ObservableObject {
     
-    @Published private(set) var moments: [Moment] = []
+    @Published private(set) var activities: [Activity] = []
     
-    private let storageService: MomentStorageService
+    private let storageService: ActivityStorageService
     
-    init(storageService: MomentStorageService = UserDefaultsMomentStorageService()) {
+    @Published private(set) var completions: [ActivityCompletion] = []
+    init(
+        storageService: ActivityStorageService = UserDefaultsActivityStorageService()
+    ) {
         self.storageService = storageService
-        self.moments = storageService.loadMoments()
+        
+        self.activities = storageService.loadActivities()
+        self.completions = storageService.loadCompletions()
     }
     
     // MARK: - Filters
     
-    func moments(for period: MomentPeriod) -> [Moment] {
-        moments.filter { $0.period == period }
+    func activities(
+        for period: ActivityPeriod
+    ) -> [Activity] {
+        activities.filter {
+            $0.period == period
+        }
     }
     
-    // MARK: - CRUD Actions
+    // MARK: - Completion
     
-    func addMoment(_ moment: Moment) {
-        moments.insert(moment, at: 0)
-        saveMoments()
+    func isCompleted(
+        _ activity: Activity,
+        on date: Date
+    ) -> Bool {
+        
+        let calendar = Calendar.current
+        
+        return completions.contains { completion in
+            completion.ActivityID == activity.id &&
+            calendar.isDate(
+                completion.date,
+                inSameDayAs: date
+            )
+        }
     }
     
-    func updateMoment(_ updatedMoment: Moment) {
-        guard let index = moments.firstIndex(where: { $0.id == updatedMoment.id }) else {
+    func toggleCompletion(
+        for activity: Activity,
+        on date: Date = Date()
+    ) {
+        
+        let calendar = Calendar.current
+        
+        if let index = completions.firstIndex(
+            where: { completion in
+                completion.ActivityID == activity.id &&
+                calendar.isDate(
+                    completion.date,
+                    inSameDayAs: date
+                )
+            }
+        ) {
+            completions.remove(at: index)
+        } else {
+            completions.append(
+                ActivityCompletion(
+                    activityID: activity.id,
+                    date: date
+                )
+            )
+        }
+        
+        storageService.saveCompletions(
+            completions
+        )
+    }
+    
+    // MARK: - CRUD
+    
+    func addActivity(
+        _ activity: Activity
+    ) {
+        activities.insert(
+            activity,
+            at: 0
+        )
+        
+        saveActivity()
+    }
+    
+    func updateactivity(
+        _ activity: Activity
+    ) {
+        guard let index = activities.firstIndex(
+            where: { $0.id == activity.id }
+        ) else {
             return
         }
-        moments[index] = updatedMoment
-        saveMoments()
+        
+        activities[index] = activity
+        
+        saveActivity()
     }
     
-    func deleteMoment(_ moment: Moment) {
-        moments.removeAll { $0.id == moment.id }
-        saveMoments()
+    func deleteActivity(
+        _ activity: Activity
+    ) {
+        activities.removeAll {
+            $0.id == activity.id
+        }
+        
+        completions.removeAll {
+            $0.ActivityID == activity.id
+        }
+        
+        saveActivity()
+        saveCompletions()
     }
     
-    func toggleCompletion(for moment: Moment) {
-        guard let index = moments.firstIndex(where: { $0.id == moment.id }) else {
+    // MARK: - Persistence
+    
+    private func saveActivity() {
+        storageService.saveActivities(
+            activities
+        )
+    }
+    
+    private func saveCompletions() {
+        storageService.saveCompletions(
+            completions
+        )
+    }
+    
+    func isDue(
+        _ activity: Activity,
+        on date: Date = Date()
+    ) -> Bool {
+        
+        let calendar = Calendar.current
+        
+        switch activity.recurrence {
+            
+        case .daily:
+            return true
+            
+        case .weekly:
+            let weekday = calendar.component(
+                .weekday,
+                from: date
+            )
+            
+            return activity.selectedWeekdays.contains(
+                weekday
+            )
+            
+        case .monthly:
+            return true
+        }
+    }
+    
+    func dueActivities(
+        on date: Date = Date()
+    ) -> [Activity] {
+        activities.filter {
+            isDue(
+                $0,
+                on: date
+            )
+        }
+    }
+    
+    private func startOfCurrentWeek(
+        for date: Date = Date()
+    ) -> Date {
+        Calendar.current.date(
+            from: Calendar.current.dateComponents(
+                [.yearForWeekOfYear, .weekOfYear],
+                from: date
+            )
+        ) ?? date
+    }
+    
+    func weeklyTargetCount(
+        referenceDate: Date = Date()
+    ) -> Int {
+        
+        let calendar = Calendar.current
+        let weekStart = startOfCurrentWeek(
+            for: referenceDate
+        )
+        
+        return activities.reduce(0) { total, activity in
+            
+            switch activity.recurrence {
+                
+            case .daily:
+                return total + 7
+                
+            case .weekly:
+                return total + activity.selectedWeekdays.count
+                
+            case .monthly:
+             
+                guard let weekEnd = calendar.date(
+                    byAdding: .day,
+                    value: 6,
+                    to: weekStart
+                ) else {
+                    return total
+                }
+                
+                let firstDay = calendar.startOfDay(
+                    for: weekStart
+                )
+                
+                let lastDay = calendar.startOfDay(
+                    for: weekEnd
+                )
+                
+                if firstDay <= lastDay {
+                    return total + 1
+                }
+                
+                return total
+            }
+        }
+    }
+    
+    func weeklyCompletedCount(
+        referenceDate: Date = Date()
+    ) -> Int {
+        
+        let calendar = Calendar.current
+        
+        guard let weekInterval = calendar.dateInterval(
+            of: .weekOfYear,
+            for: referenceDate
+        ) else {
+            return 0
+        }
+        
+        return completions.reduce(0) { count, completion in
+            
+            guard weekInterval.contains(
+                completion.date
+            ) else {
+                return count
+            }
+            
+            guard let activity = activities.first(
+                where: {
+                    $0.id == completion.ActivityID
+                }
+            ) else {
+                return count
+            }
+            
+            guard isDue(
+                activity,
+                on: completion.date
+            ) else {
+                return count
+            }
+            
+            return count + 1
+        }
+    }
+        
+    func toggleActive(
+        _ activity: Activity
+    ) {
+        guard let index = activities.firstIndex(
+            where: { $0.id == activity.id }
+        ) else {
             return
         }
-        moments[index].isCompleted.toggle()
-        saveMoments()
+        
+        activities[index].isActive.toggle()
+        
+        let updateActivity = activities[index]
+        
+        if updateActivity.isActive {
+            
+            if updateActivity.notificationsEnabled {
+                NotificationManager.shared.scheduleNotifications(
+                    for: updateActivity
+                )
+            }
+            
+        } else {
+            
+            NotificationManager.shared.cancelNotifications(
+                for: updateActivity
+            )
+        }
+        
+        saveActivity()
     }
     
-    private func saveMoments() {
-        storageService.saveMoments(moments)
-    }
 }

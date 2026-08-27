@@ -1,5 +1,5 @@
 //
-//  MomentCardView.swift
+//  ActivityCardView.swift
 //  DailyCheckIn
 //
 //  Created by Wahid on 20.08.26.
@@ -7,22 +7,18 @@
 
 import SwiftUI
 
-struct MomentCardView: View {
-    let moment: Moment
+struct ActivityCardView: View {
+    let activity: Activity
 
     var body: some View {
         HStack(spacing: AppSpacing.standard) {
-            Image(systemName: moment.isCompleted ? "checkmark.circle.fill" : "circle")
-                .font(.title2)
-                .foregroundColor(moment.isCompleted ? .accentColor : .gray)
-
             VStack(alignment: .leading, spacing: AppSpacing.extraSmall) {
-                Text(moment.title)
+                Text(activity.title)
                     .font(.headline)
                     .foregroundColor(.primary)
 
-                if !moment.subtitle.isEmpty {
-                    Text(moment.subtitle)
+                if !activity.subtitle.isEmpty {
+                    Text(activity.subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -31,7 +27,7 @@ struct MomentCardView: View {
 
             Spacer()
 
-            Text(moment.period.rawValue.capitalized)
+            Text(activity.period.rawValue.capitalized)
                 .font(.caption)
                 .fontWeight(.medium)
                 .padding(.horizontal, AppSpacing.small)

@@ -90,7 +90,7 @@ final class SettingsViewModel: ObservableObject {
             )
         
         let finalName = trimmedName.isEmpty
-            ? "Wahid"
+            ? "YourName"
             : trimmedName
         
         displayName = finalName
@@ -341,3 +341,4 @@ enum SettingsError: Error {
     case notificationPermissionDenied
     case notificationPermissionNotDetermined
 }
+

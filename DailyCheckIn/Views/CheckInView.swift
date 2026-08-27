@@ -574,11 +574,12 @@ struct CheckInView: View {
             .pickerStyle(.segmented)
             .padding(.vertical, 4)
 
-            // Dynamische Anzeige basierend auf der Auswahl
             if viewModel.reflectionType == .sliders {
+                reflectionPromptCard
                 sentimentSlidersCard
                     .transition(.opacity.combined(with: .move(edge: .top)))
             } else {
+                reflectionPromptCard
                 thoughtsCard
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
@@ -657,7 +658,7 @@ struct CheckInView: View {
 
     private var thoughtsCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.standard) {
-            Label("GDetailed Check", systemImage: "note.text")
+            Label("Detailed Check", systemImage: "note.text")
                 .font(.headline)
                 .foregroundStyle(AppColors.textPrimary)
             

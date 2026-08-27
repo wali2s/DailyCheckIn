@@ -1,5 +1,5 @@
 //
-//  MomentStorageService.swift
+//  ActivityStorageService.swift
 //  DailyCheckIn
 //
 //  Created by Wahid on 21.08.26.
@@ -7,15 +7,20 @@
 
 import Foundation
 
-protocol MomentStorageService {
-    func loadMoments() -> [Moment]
-    func saveMoments(_ moments: [Moment])
+protocol ActivityStorageService {
+    func loadActivities() -> [Activity]
+    func saveActivities(_ activity: [Activity])
+    
+    func loadCompletions() -> [ActivityCompletion]
+    func saveCompletions(_ completions: [ActivityCompletion])
 }
 
-final class UserDefaultsMomentStorageService: MomentStorageService {
+final class UserDefaultsActivityStorageService: ActivityStorageService {
     
     private let userDefaults: UserDefaults
-    private let storageKey = "saved_moments"
+    
+    private let ActivitysStorageKey = "saved_activity"
+    private let completionsStorageKey = "saved_activity_completions"
     
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -24,11 +29,14 @@ final class UserDefaultsMomentStorageService: MomentStorageService {
         self.userDefaults = userDefaults
     }
     
-    func loadMoments() -> [Moment] {
-        guard let data = userDefaults.data(forKey: storageKey) else {
-            // Default setup for the very first launch
+    // MARK: - Activity
+    
+    func loadActivities() -> [Activity] {
+        guard let data = userDefaults.data(
+            forKey: ActivitysStorageKey
+        ) else {
             return [
-                Moment(
+                Activity(
                     title: "20 min Guitar",
                     subtitle: "Take some time for yourself.",
                     iconName: "guitars.fill",
@@ -38,19 +46,75 @@ final class UserDefaultsMomentStorageService: MomentStorageService {
         }
         
         do {
-            return try decoder.decode([Moment].self, from: data)
+            return try decoder.decode(
+                [Activity].self,
+                from: data
+            )
         } catch {
-            print("Failed to load moments: \(error)")
+            print(
+                "Failed to load Activitys: \(error)"
+            )
             return []
         }
     }
     
-    func saveMoments(_ moments: [Moment]) {
+    func saveActivities(
+        _ activitys: [Activity]
+    ) {
         do {
-            let data = try encoder.encode(moments)
-            userDefaults.set(data, forKey: storageKey)
+            let data = try encoder.encode(
+                activitys
+            )
+            
+            userDefaults.set(
+                data,
+                forKey: ActivitysStorageKey
+            )
         } catch {
-            print("Failed to save moments: \(error)")
+            print(
+                "Failed to save activitys: \(error)"
+            )
+        }
+    }
+    
+    // MARK: - Completions
+    
+    func loadCompletions() -> [ActivityCompletion] {
+        guard let data = userDefaults.data(
+            forKey: completionsStorageKey
+        ) else {
+            return []
+        }
+        
+        do {
+            return try decoder.decode(
+                [ActivityCompletion].self,
+                from: data
+            )
+        } catch {
+            print(
+                "Failed to load Activity completions: \(error)"
+            )
+            return []
+        }
+    }
+    
+    func saveCompletions(
+        _ completions: [ActivityCompletion]
+    ) {
+        do {
+            let data = try encoder.encode(
+                completions
+            )
+            
+            userDefaults.set(
+                data,
+                forKey: completionsStorageKey
+            )
+        } catch {
+            print(
+                "Failed to save Activity completions: \(error)"
+            )
         }
     }
 }

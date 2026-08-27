@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class HomeViewModel: ObservableObject {
+class HomeViewModel: ObservableObject {
     
     @Published private(set) var checkIns: [CheckIn] = []
     @Published var selectedSpace: JournalSpace = .personal
@@ -82,9 +82,15 @@ final class HomeViewModel: ObservableObject {
             checkin.space == .personal}
     }
     
+    @available(*, deprecated, message: "Use professionalCheckInToday instead.")
     var professinalCheckInToday: CheckIn? {
+        professionalCheckInToday
+    }
+
+    var professionalCheckInToday: CheckIn? {
         todayCheckIns.first { checkin in
-            checkin.space == .professional}
+            checkin.space == .professional
+        }
     }
     
     func addCheckIn(_ checkIn: CheckIn) {
@@ -164,3 +170,4 @@ final class HomeViewModel: ObservableObject {
         return "All spaces completed today."
     }
 }
+
