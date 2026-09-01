@@ -7,27 +7,25 @@
 
 import SwiftUI
 
-// MARK: - Space Color Palette
-
-private enum SpaceColors {
-    static let personalAccent = Color(red: 0.75, green: 0.55, blue: 0.20)
-    static let professionalAccent = Color(red: 0.15, green: 0.38, blue: 0.45)
-}
-
 struct HomeView: View {
 
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
-    @State private var selectedSpace: JournalSpace?
+
+    @State private var activeSpace: JournalSpace = .personal
+    @State private var spaceScrollPosition: JournalSpace?
+    @State private var navigationSelectedSpace: JournalSpace?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 28) {
                 headerSection
-                spacesSection
+
+                spaceCarouselSection
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
         .background(AppColors.warmCanvas.ignoresSafeArea())
@@ -45,27 +43,45 @@ struct HomeView: View {
                     .clipShape(Capsule())
             }
         }
-        .navigationDestination(item: $selectedSpace) { space in
+        .navigationDestination(item: $navigationSelectedSpace) { space in
             CheckInView(
                 space: space,
                 existingCheckIn: viewModel.checkIn(for: space)
             ) { newCheckIn in
                 viewModel.addCheckIn(newCheckIn)
-                selectedSpace = nil
+                navigationSelectedSpace = nil
             }
+        }
+        .onAppear {
+            spaceScrollPosition = activeSpace
         }
         .onReceive(
             NotificationCenter.default.publisher(for: .checkInReminderSelected)
         ) { notification in
-            guard let reminderType = notification.object as? String else { return }
+            guard let reminderType = notification.object as? String else {
+                return
+            }
+
+            let selectedSpace: JournalSpace?
 
             switch reminderType {
             case "personal":
                 selectedSpace = .personal
+
             case "professional":
                 selectedSpace = .professional
+
             default:
-                break
+                selectedSpace = nil
+            }
+
+            guard let selectedSpace else {
+                return
+            }
+
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                activeSpace = selectedSpace
+                spaceScrollPosition = selectedSpace
             }
         }
     }
@@ -103,9 +119,8 @@ struct HomeView: View {
                 Image(systemName: "person.fill")
                     .font(.body)
                     .fontWeight(.semibold)
-                    .foregroundStyle(SpaceColors.personalAccent).opacity(0.6)
+                    .foregroundStyle(AppColors.textPrimary.opacity(0.65))
                     .scaleEffect(1.35)
-                    
             }
         }
         .buttonStyle(.plain)
@@ -113,253 +128,268 @@ struct HomeView: View {
         .accessibilityHint("Opens your profile settings.")
     }
 
-    // MARK: - Spaces Section
+    // MARK: - Space Carousel Section
 
-    private var spacesSection: some View {
+    private var spaceCarouselSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Your Spaces")
-                .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Choose your check-in space")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
 
-            ForEach(JournalSpace.allCases) { space in
-                SpaceCheckInCard(
-                    space: space,
-                    checkIn: viewModel.checkIn(for: space),
-                    onCheckIn: {
-                        selectedSpace = space
+                Text("Swipe horizontally to switch between your personal and work check-in.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            horizontalSpaceCarousel
+
+            spacePaginationDots
+
+            Button {
+                navigationSelectedSpace = activeSpace
+            } label: {
+                HStack(spacing: 8) {
+                    Text(
+                        viewModel.checkIn(for: activeSpace) == nil
+                        ? "Check In"
+                        : "Edit Check-In"
+                    )
+
+                    Image(
+                        systemName: viewModel.checkIn(for: activeSpace) == nil
+                        ? "arrow.right"
+                        : "pencil"
+                    )
+                }
+            }
+            .buttonStyle(
+                PrimaryButtonStyle(
+                    backgroundColor: AppColors.primaryAction.opacity(0.9)
+                )
+            )
+            .accessibilityIdentifier("homeCheckInButton")
+            .accessibilityLabel(
+                viewModel.checkIn(for: activeSpace) == nil
+                ? "Start \(activeSpace.title) check-in"
+                : "Edit \(activeSpace.title) check-in"
+            )
+        }
+    }
+
+    // MARK: - Horizontal Space Carousel
+
+    private var horizontalSpaceCarousel: some View {
+        GeometryReader { geometry in
+            let cardWidth = geometry.size.width * 0.76
+            let cardHeight: CGFloat = 315
+            let cardSpacing: CGFloat = 14
+            let viewportWidth = geometry.size.width
+
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: cardSpacing) {
+                    ForEach(JournalSpace.allCases) { space in
+                        GeometryReader { cardGeometry in
+                            let cardMidX = cardGeometry
+                                .frame(in: .named("spaceCarousel"))
+                                .midX
+
+                            let viewportMidX = viewportWidth / 2
+                            let distance = abs(cardMidX - viewportMidX)
+
+                            let progress = min(
+                                distance / (cardWidth + cardSpacing),
+                                1
+                            )
+
+                            let scale = 1 - (progress * 0.16)
+                            let opacity = 1 - (progress * 0.46)
+
+                            SpaceCarouselCard(
+                                space: space,
+                                isCompleted: viewModel.checkIn(for: space) != nil
+                            )
+                            .scaleEffect(scale)
+                            .opacity(opacity)
+                            .animation(
+                                .easeOut(duration: 0.18),
+                                value: progress
+                            )
+                            .onTapGesture {
+                                withAnimation(
+                                    .spring(
+                                        response: 0.35,
+                                        dampingFraction: 0.82
+                                    )
+                                ) {
+                                    activeSpace = space
+                                    spaceScrollPosition = space
+                                }
+                            }
+                        }
+                        .frame(
+                            width: cardWidth,
+                            height: cardHeight
+                        )
+                        .id(space)
                     }
+                }
+                .scrollTargetLayout()
+                .padding(
+                    .horizontal,
+                    (viewportWidth - cardWidth) / 2
                 )
             }
+            .coordinateSpace(name: "spaceCarousel")
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $spaceScrollPosition)
+            .onChange(of: spaceScrollPosition) { _, newSpace in
+                guard let newSpace else {
+                    return
+                }
+
+                withAnimation(.easeInOut(duration: 0.28)) {
+                    activeSpace = newSpace
+                }
+            }
         }
+        .frame(height: 330)
+    }
+
+    // MARK: - Pagination Dots
+
+    private var spacePaginationDots: some View {
+        HStack(spacing: 6) {
+            ForEach(JournalSpace.allCases) { space in
+                let isSelected = space == activeSpace
+
+                Circle()
+                    .fill(
+                        isSelected
+                        ? AppColors.primaryAction
+                        : AppColors.textSecondary.opacity(0.25)
+                    )
+                    .frame(
+                        width: isSelected ? 8 : 6,
+                        height: isSelected ? 8 : 6
+                    )
+                    .scaleEffect(isSelected ? 1.12 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.22),
+                        value: activeSpace
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Selected check-in space")
+        .accessibilityValue(activeSpace.title)
     }
 }
 
-// MARK: - Harmonious & Colored Space Check-In Card
+// MARK: - Space Carousel Card
 
-private struct SpaceCheckInCard: View {
+// MARK: - Space Carousel Card
+
+private struct SpaceCarouselCard: View {
 
     let space: JournalSpace
-    let checkIn: CheckIn?
-    let onCheckIn: () -> Void
+    let isCompleted: Bool
 
-    // Zuweisung der 2 Akzentfarben je nach Space
     private var accentColor: Color {
         switch space {
         case .personal:
-            return SpaceColors.personalAccent
+            return AppColors.accentMint
+
         case .professional:
-            return SpaceColors.professionalAccent
+            return AppColors.accentBlue
         }
+    }
+
+    // Asset-Name muss exakt dem Namen in Assets.xcassets entsprechen.
+    private var imageName: String {
+        switch space {
+        case .personal:
+            return "home"
+
+        case .professional:
+            return "work"
+        }
+    }
+
+    private var statusTitle: String {
+        isCompleted
+        ? "Completed today"
+        : "Ready for your check-in"
+    }
+
+    private var statusImage: String {
+        isCompleted
+        ? "checkmark.circle.fill"
+        : "arrow.left.and.right"
     }
 
     var body: some View {
-        Button(action: onCheckIn) {
-            VStack(alignment: .leading, spacing: 20) {
-                topHeader
+        VStack(spacing: 14) {
+            Spacer(minLength: 0)
 
-                if let checkIn {
-                    completedContent(checkIn)
-                } else {
-                    pendingContent
-                }
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    AppColors.warmSurface
-
-                    // Dezenter Farbverlauf mit der jeweiligen Akzentfarbe
-                    LinearGradient(
-                        colors: [
-                            accentColor.opacity(checkIn != nil ? 0.08 : 0.04),
-                            Color.clear
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(
-                        accentColor.opacity(checkIn != nil ? 0.3 : 0.12),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: Color.black.opacity(0.025), radius: 12, x: 0, y: 4)
-        }
-        .buttonStyle(PressableCardStyle())
-        .accessibilityIdentifier("spaceCard.\(space.rawValue)")
-    }
-
-    // MARK: - Subviews
-
-    private var topHeader: some View {
-        HStack(alignment: .top, spacing: 14) {
-            // Icon Badge mit Akzentfarbe
             ZStack {
+                // Dezentes Leuchten hinter deinem Asset-Bild
                 Circle()
-                    .fill(accentColor.opacity(0.12))
-                    .frame(width: 52, height: 52)
+                    .fill(accentColor.opacity(0.24))
+                    .frame(width: 178, height: 178)
+                    .blur(radius: 22)
 
-                Image(systemName: space.iconName)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(accentColor)
+                // Dein Bild aus Assets.xcassets
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 235, height: 235)
+                    .opacity(0.92)
             }
+            .frame(width: 240, height: 205)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(spacing: 5) {
                 Text(space.title)
-                    .font(.title3)
-                    .fontWeight(.bold)
+                    .font(.system(size: 23, weight: .bold, design: .rounded))
                     .foregroundStyle(AppColors.textPrimary)
 
                 Text(space.subtitle)
                     .font(.subheadline)
                     .foregroundStyle(AppColors.textSecondary)
-            }
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.horizontal, 12)
 
-            Spacer()
-
-            // Status Pill mit Akzentfarbe
-            HStack(spacing: 5) {
-                Image(systemName: checkIn != nil ? "checkmark" : "sparkles")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-
-                Text(checkIn != nil ? "Completed" : "Pending")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-            }
-            .foregroundStyle(checkIn != nil ? accentColor : AppColors.textSecondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(accentColor.opacity(checkIn != nil ? 0.15 : 0.06))
-            )
-        }
-    }
-
-    private func completedContent(_ checkIn: CheckIn) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Divider()
-                .background(accentColor.opacity(0.12))
-
-            // Mood & Note Content
-            HStack(spacing: 14) {
-                Image(systemName: checkIn.mood.imageName)
-                    .font(.system(size: 32))
-                    .foregroundStyle(checkIn.mood.iconColor)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(checkIn.mood.title)
-                        .font(.headline)
-                        .foregroundStyle(AppColors.textPrimary)
-
-                    Text(checkIn.note.isEmpty ? "No note added for today." : checkIn.note)
-                        .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
-                        .lineLimit(2)
-                }
-
-                Spacer()
-            }
-
-            // Floating Metric Badges
-            HStack(spacing: 8) {
-                FloatingMetricBadge(
-                    icon: "bolt.fill",
-                    label: "Energy",
-                    value: "\(checkIn.energyLevel)/5"
-                )
-
-                FloatingMetricBadge(
-                    icon: "waveform.path.ecg",
-                    label: "Stress",
-                    value: "\(checkIn.stressLevel)/5"
-                )
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
+                Label(statusTitle, systemImage: statusImage)
                     .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundStyle(accentColor.opacity(0.7))
-            }
-        }
-    }
-
-    private var pendingContent: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Ready to reflect?")
-                    .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.textPrimary)
-
-                Text("Tap anywhere to start your daily check-in.")
-                    .font(.caption)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(
+                        isCompleted
+                        ? accentColor
+                        : AppColors.textSecondary
+                    )
+                    .padding(.top, 2)
             }
 
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .fill(accentColor)
-                    .frame(width: 38, height: 38)
-
-                Image(systemName: "arrow.right")
-                    .font(.footnote)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-            }
+            Spacer(minLength: 0)
         }
-        .padding(.top, 2)
-    }
-}
-
-// MARK: - Floating Metric Badge
-
-private struct FloatingMetricBadge: View {
-    let icon: String
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundStyle(AppColors.textSecondary)
-
-            Text("\(label) \(value)")
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(AppColors.textPrimary)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(AppColors.warmCanvas)
-        .clipShape(Capsule())
-    }
-}
-
-// MARK: - Custom Pressable Button Style
-
-private struct PressableCardStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.92 : 1.0)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(space.title)
+        .accessibilityValue(statusTitle)
+        .accessibilityHint(
+            "Swipe horizontally to choose another space. Tap the Check In button to continue."
+        )
     }
 }
 
 // MARK: - Preview
 
-#Preview("Home View - Two Accents") {
+#Preview("Home View - Space Carousel") {
     NavigationStack {
         HomeView(
             viewModel: HomeViewModel(
@@ -369,3 +399,4 @@ private struct PressableCardStyle: ButtonStyle {
         )
     }
 }
+ 

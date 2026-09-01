@@ -27,6 +27,9 @@ struct Activity: Identifiable, Codable {
     var selectedWeekdays: Set<Int>
     var monthlyIntervalDays: Int
     
+    // Ziel-Tage pro Woche (z. B. 7 für täglich, oder die Anzahl der ausgewählten Tage)
+    var targetDaysPerWeek: Int
+    
     var isActive: Bool
     var notificationsEnabled: Bool
     
@@ -41,6 +44,7 @@ struct Activity: Identifiable, Codable {
         dailyTimes: [Date] = [Date()],
         selectedWeekdays: Set<Int>? = [2],
         monthlyIntervalDays: Int? = 30,
+        targetDaysPerWeek: Int? = nil,
         isActive: Bool = true,
         notificationsEnabled: Bool = false
     ) {
@@ -52,11 +56,26 @@ struct Activity: Identifiable, Codable {
         self.targetMinutes = targetMinutes
         self.recurrence = recurrence
         self.dailyTimes = dailyTimes
-        self.selectedWeekdays = selectedWeekdays ?? []
+        
+        let weekdays = selectedWeekdays ?? []
+        self.selectedWeekdays = weekdays
         self.monthlyIntervalDays = monthlyIntervalDays ?? 30
+        
+        // Wenn targetDaysPerWeek nicht explizit übergeben wird, berechnen wir es anhand der Recurrence
+        if let targetDays = targetDaysPerWeek {
+            self.targetDaysPerWeek = targetDays
+        } else {
+            switch recurrence {
+            case .daily:
+                self.targetDaysPerWeek = 7
+            case .weekly:
+                self.targetDaysPerWeek = weekdays.isEmpty ? 7 : weekdays.count
+            case .monthly:
+                self.targetDaysPerWeek = 1
+            }
+        }
         
         self.isActive = isActive
         self.notificationsEnabled = notificationsEnabled
     }
 }
-

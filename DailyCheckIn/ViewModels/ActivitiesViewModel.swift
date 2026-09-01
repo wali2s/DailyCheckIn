@@ -186,4 +186,39 @@ final class ActivityViewModel: ObservableObject {
     private func saveCompletions() {
         storageService.saveCompletions(completions)
     }
+    
+    func isFullyCompletedForWeek(activity: Activity) -> Bool {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today) else {
+            return false
+        }
+        
+        if activity.recurrence == .weekly && !activity.selectedWeekdays.isEmpty {
+            for dayOffset in 0..<7 {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: weekInterval.start) {
+                    let weekdayComponent = calendar.component(.weekday, from: date)
+                    
+                    if activity.selectedWeekdays.contains(weekdayComponent) {
+                        if !isCompleted(activity, on: date) {
+                            return false
+                        }
+                    }
+                }
+            }
+            return true
+        }
+        
+        var completedCount = 0
+        for dayOffset in 0..<7 {
+            if let date = calendar.date(byAdding: .day, value: dayOffset, to: weekInterval.start) {
+                if isCompleted(activity, on: date) {
+                    completedCount += 1
+                }
+            }
+        }
+        
+        return completedCount >= activity.targetDaysPerWeek
+    }
 }

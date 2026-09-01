@@ -174,8 +174,6 @@ struct CheckInView: View {
                             let viewportMidX = viewportWidth / 2
                             let distance = abs(cardMidX - viewportMidX)
 
-                            // 0 = Perfekt in der Mitte (eingerastet)
-                            // 1 = Außerhalb der Mitte (wird gerade gewischt)
                             let progress = min(distance / (cardWidth + cardSpacing), 1)
 
                             let scale = 1 - (progress * 0.20)
@@ -219,9 +217,6 @@ struct CheckInView: View {
         }
         .frame(height: 360)
     }
-    
-    // Die Timer-gesteuerte Hilfsmethode 'triggerDotsAutoDisappear' wird entfernt.
-    
     
     private func verticalMoodCard(
         mood: Mood,
