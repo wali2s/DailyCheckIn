@@ -414,42 +414,214 @@ struct ActivitiesView: View {
         .disabled(!isScheduledForToday)
     }
     
-    // MARK: - This Week Section
     private var thisWeekSection: some View {
+        
         let completed = viewModel.weeklyCompletedCount()
         let total = viewModel.weeklyTargetCount()
-        let progress: Double = total > 0 ? Double(completed) / Double(total) : 0
         
-        return VStack(alignment: .leading, spacing: AppSpacing.standard) {
-            Text("This Week")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(AppColors.textPrimary)
+        let progress: Double = total > 0
+            ? Double(completed) / Double(total)
+            : 0
+        
+        return VStack(
+            alignment: .leading,
+            spacing: AppSpacing.standard
+        ) {
             
-            VStack(alignment: .leading, spacing: AppSpacing.standard) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(completed) of \(total) activities")
-                            .font(.headline)
-                            .foregroundStyle(AppColors.textPrimary)
+            Text("This Week")
+                .font(
+                    .system(
+                        size: 24,
+                        weight: .bold,
+                        design: .rounded
+                    )
+                )
+                .foregroundStyle(
+                    AppColors.textPrimary
+                )
+            
+            VStack(
+                spacing: AppSpacing.standard
+            ) {
+                
+                // MARK: Progress Circle
+                
+                ZStack {
+                    
+                    Circle()
+                        .stroke(
+                            AppColors.surfaceSecondary,
+                            lineWidth: 10
+                        )
+                    
+                    Circle()
+                        .trim(
+                            from: 0,
+                            to: progress
+                        )
+                        .stroke(
+                            AppColors.primaryAction,
+                            style: StrokeStyle(
+                                lineWidth: 10,
+                                lineCap: .round
+                            )
+                        )
+                        .rotationEffect(
+                            .degrees(-90)
+                        )
+                        .animation(
+                            .easeInOut(duration: 0.5),
+                            value: progress
+                        )
+                    
+                    VStack(
+                        spacing: 2
+                    ) {
+                        Text("\(completed)")
+                            .font(
+                                .system(
+                                    size: 28,
+                                    weight: .bold,
+                                    design: .rounded
+                                )
+                            )
+                            .foregroundStyle(
+                                AppColors.textPrimary
+                            )
                         
-                        Text(total == 0 ? "Add an activity for this week." : "Keep making time for yourself.")
-                            .font(.subheadline)
-                            .foregroundStyle(AppColors.textSecondary)
+                        Text("of \(total)")
+                            .font(
+                                .caption
+                            )
+                            .foregroundStyle(
+                                AppColors.textSecondary
+                            )
                     }
-                    
-                    Spacer()
-                    
-                    Text("\(Int(progress * 100))%")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.primaryAction)
+                }
+                .frame(
+                    width: 110,
+                    height: 110
+                )
+                
+                // MARK: Percentage
+                
+                Text("\(Int(progress * 100))%")
+                    .font(
+                        .system(
+                            size: 20,
+                            weight: .bold,
+                            design: .rounded
+                        )
+                    )
+                    .foregroundStyle(
+                        AppColors.primaryAction
+                    )
+                
+                // MARK: Progress Dots
+                
+                if total > 0 {
+                    HStack(
+                        spacing: AppSpacing.standard
+                    ) {
+                        
+                        HStack(
+                            spacing: 6
+                        ) {
+                            Image(
+                                systemName: "checkmark.circle.fill"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(
+                                AppColors.accentMint
+                            )
+                            
+                            Text("\(completed) completed")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(
+                                    AppColors.textSecondary
+                                )
+                        }
+                        
+                        Text("•")
+                            .foregroundStyle(
+                                AppColors.textSecondary.opacity(0.4)
+                            )
+                        
+                        HStack(
+                            spacing: 6
+                        ) {
+                            Image(
+                                systemName: "circle"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(
+                                AppColors.textSecondary.opacity(0.55)
+                            )
+                            
+                            Text("\(max(total - completed, 0)) remaining")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(
+                                    AppColors.textSecondary
+                                )
+                        }
+                    }
                 }
                 
-                ProgressView(value: progress, total: 1)
-                    .tint(AppColors.primaryAction)
+                // MARK: Description
+                
+                Text(
+                    total == 0
+                    ? "Add an activity for this week."
+                    : weeklyProgressMessage(
+                        progress: progress
+                    )
+                )
+                .font(
+                    .subheadline
+                )
+                .foregroundStyle(
+                    AppColors.textSecondary
+                )
+                .multilineTextAlignment(
+                    .center
+                )
             }
-            .padding(AppSpacing.cardPadding)
-            .background(AppColors.warmSurface)
-            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
+            .frame(
+                maxWidth: .infinity
+            )
+            .padding(
+                AppSpacing.cardPadding
+            )
+            .background(
+                AppColors.warmSurface
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.large,
+                    style: .continuous
+                )
+            )
+        }
+    }
+    
+    private func weeklyProgressMessage(
+        progress: Double
+    ) -> String {
+        
+        switch progress {
+        case 0:
+            return "A new week is a fresh start."
+            
+        case 0..<0.5:
+            return "You're getting started."
+            
+        case 0.5..<1:
+            return "You're building a good rhythm."
+            
+        default:
+            return "Great job this week."
         }
     }
     
