@@ -110,8 +110,13 @@ class HomeViewModel: ObservableObject {
                 mood: checkIn.mood,
                 energyLevel: checkIn.energyLevel,
                 stressLevel: checkIn.stressLevel,
+                focusLevel: checkIn.focusLevel,
+                socialBattery: checkIn.socialBattery,
+                physicalTension: checkIn.physicalTension,
                 note: checkIn.note,
-                tags: checkIn.tags
+                tags: checkIn.tags,
+                personalFactors: checkIn.personalFactors,
+                professionalFactors: checkIn.professionalFactors
             )
             
             checkIns[existingIndex] = updatedCheckIn
@@ -140,6 +145,35 @@ class HomeViewModel: ObservableObject {
         }
     }
     
+    func replaceCheckIns(
+        with checkIns: [CheckIn]
+    ) {
+        self.checkIns = checkIns
+        saveCheckIns()
+    }
+    
+    func mergeCheckIns(
+        from importedCheckIns: [CheckIn]
+    ) {
+        for importedCheckIn in importedCheckIns {
+            let alreadyExists = checkIns.contains {
+                $0.id == importedCheckIn.id
+                || (
+                    $0.space == importedCheckIn.space
+                    && calendar.isDate(
+                        $0.date,
+                        inSameDayAs: importedCheckIn.date
+                    )
+                )
+            }
+
+            if !alreadyExists {
+                checkIns.append(importedCheckIn)
+            }
+        }
+
+        saveCheckIns()
+    }
     
     private func saveCheckIns() {
         storageService.saveCheckIns(checkIns)
@@ -163,11 +197,21 @@ class HomeViewModel: ObservableObject {
     }
     
     var dailyCompletionMessage: String {
-        if completedSpacesToday == 0 {
-            return "Start your daily check-in."
+        let privateCompleted = checkIn(for: .personal) != nil
+        let workCompleted = checkIn(for: .professional) != nil
+
+        switch (privateCompleted, workCompleted) {
+        case (false, false):
+            return "Start your daily check-ins."
+
+        case (true, false):
+            return "Private check-in completed. Work is still open."
+
+        case (false, true):
+            return "Work check-in completed. Private is still open."
+
+        case (true, true):
+            return "Both check-ins completed for today."
         }
-        
-        return "All spaces completed today."
     }
 }
-

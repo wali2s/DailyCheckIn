@@ -13,24 +13,42 @@ final class DailyCheckInUITests: XCTestCase {
     func testUserCanOpenProfessionalCheckInForm() {
         let app = XCUIApplication()
         app.launch()
-        
-        let createCheckInButton = app.buttons[
-            "createCheckInButton.professional"
-        ]
-        
+
+        let carousel = app.scrollViews["checkInSpaceCarousel"]
+
         XCTAssertTrue(
-            createCheckInButton.waitForExistence(timeout: 3)
+            carousel.waitForExistence(timeout: 3)
         )
-        
-        createCheckInButton.tap()
-        
+
+        carousel.swipeLeft()
+
+        let checkInButton = app.buttons["homeCheckInButton"]
+
+        let workButtonExpectation = expectation(
+            for: NSPredicate(
+                format: "label == %@",
+                "Start Work check-in"
+            ),
+            evaluatedWith: checkInButton
+        )
+
+        let result = XCTWaiter().wait(
+            for: [workButtonExpectation],
+            timeout: 3
+        )
+
+        XCTAssertEqual(result, .completed)
+
+        checkInButton.tap()
+
         XCTAssertTrue(
             app.navigationBars["New Check-In"]
                 .waitForExistence(timeout: 3)
         )
-        
+
         XCTAssertTrue(
-            app.buttons["saveCheckInButton"].exists
+            app.buttons["continueCheckInButton.step1"]
+                .waitForExistence(timeout: 3)
         )
     }
     

@@ -14,6 +14,9 @@ struct CheckIn: Identifiable, Codable, Hashable {
     var mood: Mood
     var energyLevel: Int
     var stressLevel: Int
+    var focusLevel: Double
+    var socialBattery: Double
+    var physicalTension: Double
     var note: String
     var tags: [String]
     var personalFactors: [PersonalFactor]
@@ -26,6 +29,9 @@ struct CheckIn: Identifiable, Codable, Hashable {
         mood: Mood,
         energyLevel: Int = 3,
         stressLevel: Int = 3,
+        focusLevel: Double = 3,
+        socialBattery: Double = 3,
+        physicalTension: Double = 3,
         note:String = "",
         tags: [String] = [],
         personalFactors: [PersonalFactor] = [],
@@ -37,6 +43,9 @@ struct CheckIn: Identifiable, Codable, Hashable {
         self.mood = mood
         self.energyLevel = energyLevel
         self.stressLevel = stressLevel
+        self.focusLevel = focusLevel
+        self.socialBattery = socialBattery
+        self.physicalTension = physicalTension
         self.note = note
         self.tags = tags
         self.personalFactors = personalFactors
@@ -50,6 +59,9 @@ struct CheckIn: Identifiable, Codable, Hashable {
         case mood
         case energyLevel
         case stressLevel
+        case focusLevel
+        case socialBattery
+        case physicalTension
         case note
         case tags
         case personalFactors
@@ -72,6 +84,18 @@ struct CheckIn: Identifiable, Codable, Hashable {
         stressLevel = try container.decodeIfPresent(
             Int.self,
             forKey: .stressLevel
+        ) ?? 3
+        focusLevel = try container.decodeIfPresent(
+            Double.self,
+            forKey: .focusLevel
+        ) ?? 3
+        socialBattery = try container.decodeIfPresent(
+            Double.self,
+            forKey: .socialBattery
+        ) ?? 3
+        physicalTension = try container.decodeIfPresent(
+            Double.self,
+            forKey: .physicalTension
         ) ?? 3
         note = try container.decodeIfPresent(
             String.self,

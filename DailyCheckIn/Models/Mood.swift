@@ -31,9 +31,9 @@ enum Mood: String, CaseIterable, Codable, Hashable, Identifiable {
         case .neutral:
             return "Neutral"
         case .sad:
-            return "Sad"
+            return "Low"
         case .angry:
-            return "Angry"
+            return "Tense"
         }
     }
     

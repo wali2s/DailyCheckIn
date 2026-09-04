@@ -16,7 +16,13 @@ struct ContentView: View {
     @StateObject private var settingsViewModel =
         SettingsViewModel()
     @State private var selectedTab = 0
-    
+    @StateObject private var activityViewModel =
+        ActivityViewModel()
+    @Environment(\.scenePhase)
+    private var scenePhase
+
+    @StateObject private var appLockViewModel =
+        AppLockViewModel()
     
     
     init(
@@ -46,7 +52,9 @@ struct ContentView: View {
             .tag(0)
             
             NavigationStack {
-                ActivitiesView()
+                ActivitiesView(
+                    viewModel: activityViewModel
+                )
             }
             .tabItem {
                 Label(
@@ -69,7 +77,8 @@ struct ContentView: View {
             
             NavigationStack {
                 StatisticsView(
-                    homeViewModel: viewModel
+                    homeViewModel: viewModel,
+                    activityViewModel: activityViewModel
                 )
             }
             .tabItem {
@@ -83,7 +92,9 @@ struct ContentView: View {
             NavigationStack {
                 SettingsView(
                     homeViewModel: viewModel,
-                    viewModel: settingsViewModel
+                    activityViewModel: activityViewModel,
+                    viewModel: settingsViewModel,
+                    appLockViewModel: appLockViewModel
                 )
             }
             .tabItem {
@@ -98,6 +109,24 @@ struct ContentView: View {
                 \.locale,
                 Locale(identifier: appLanguage)
             )
+        .overlay {
+            if appLockViewModel.isEnabled
+                && !appLockViewModel.isUnlocked {
+
+                AppLockView {
+                    Task {
+                        await appLockViewModel.unlock()
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(1)
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background {
+                appLockViewModel.lock()
+            }
+        }
     }
 }
 

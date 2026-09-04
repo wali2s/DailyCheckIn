@@ -105,9 +105,9 @@ final class CheckInViewModel: ObservableObject {
     @Published var professionalFactors: Set<ProfessionalFactor>
     @Published var note: String
     
-    @Published var focusLevel: Double = 3.0
-    @Published var socialBattery: Double = 3.0
-    @Published var physicalTension: Double = 3.0
+    @Published var focusLevel: Double
+    @Published var socialBattery: Double
+    @Published var physicalTension: Double
     
     private let checkInID: UUID
     private let checkInDate: Date
@@ -124,6 +124,9 @@ final class CheckInViewModel: ObservableObject {
         self.mood = existingCheckIn?.mood ?? .neutral
         self.energyLevel = existingCheckIn?.energyLevel ?? 3
         self.stressLevel = existingCheckIn?.stressLevel ?? 3
+        self.focusLevel = existingCheckIn?.focusLevel ?? 3
+        self.socialBattery = existingCheckIn?.socialBattery ?? 3
+        self.physicalTension = existingCheckIn?.physicalTension ?? 3
         self.personalFactors = Set(
             existingCheckIn?.personalFactors ?? []
         )
@@ -142,6 +145,9 @@ final class CheckInViewModel: ObservableObject {
             mood: mood,
             energyLevel: energyLevel,
             stressLevel: stressLevel,
+            focusLevel: focusLevel,
+            socialBattery: socialBattery,
+            physicalTension: physicalTension,
             note: note,
             personalFactors: Array(personalFactors),
             professionalFactors: Array(professionalFactors)

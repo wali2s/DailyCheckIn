@@ -23,7 +23,6 @@ final class ActivityViewModel: ObservableObject {
     
     // MARK: - Section Computed Properties
     
-    /// Heute fällige, aktive Aufgaben (noch NICHT erledigt)
     var todayDueActivities: [Activity] {
         activities.filter { activity in
             activity.isActive &&
@@ -32,7 +31,6 @@ final class ActivityViewModel: ObservableObject {
         }
     }
     
-    /// Heute bereits ERLEDIGTE Aufgaben
     var todayCompletedActivities: [Activity] {
         activities.filter { activity in
             activity.isActive &&
@@ -41,7 +39,6 @@ final class ActivityViewModel: ObservableObject {
         }
     }
     
-    /// Geplante Aufgaben für diese Woche (Aktiv, aber heute nicht fällig)
     var thisWeekPlannedActivities: [Activity] {
         activities.filter { activity in
             activity.isActive &&
@@ -49,7 +46,6 @@ final class ActivityViewModel: ObservableObject {
         }
     }
     
-    /// Pausierte / Inaktive Aufgaben
     var pausedActivities: [Activity] {
         activities.filter { !$0.isActive }
     }
@@ -78,6 +74,54 @@ final class ActivityViewModel: ObservableObject {
             )
         }
         
+        saveCompletions()
+    }
+    
+    func replaceStoredData(
+        activities: [Activity],
+        completions: [ActivityCompletion]
+    ) {
+        self.activities = activities
+        self.completions = completions
+
+        saveActivity()
+        saveCompletions()
+    }
+    
+    func mergeStoredData(
+        activities importedActivities: [Activity],
+        completions importedCompletions: [ActivityCompletion]
+    ) {
+        let newActivities = importedActivities.filter {
+            importedActivity in
+
+            !activities.contains {
+                $0.id == importedActivity.id
+            }
+        }
+
+        activities.append(contentsOf: newActivities)
+
+        let calendar = Calendar.current
+
+        let newCompletions = importedCompletions.filter {
+            importedCompletion in
+
+            !completions.contains {
+                $0.id == importedCompletion.id
+                || (
+                    $0.ActivityID == importedCompletion.ActivityID
+                    && calendar.isDate(
+                        $0.date,
+                        inSameDayAs: importedCompletion.date
+                    )
+                )
+            }
+        }
+
+        completions.append(contentsOf: newCompletions)
+
+        saveActivity()
         saveCompletions()
     }
     
@@ -117,6 +161,20 @@ final class ActivityViewModel: ObservableObject {
         }
         
         saveActivity()
+    }
+    
+    func deleteAllStoredData() {
+        for activity in activities {
+            NotificationManager.shared.cancelNotifications(
+                for: activity
+            )
+        }
+
+        activities.removeAll()
+        completions.removeAll()
+
+        saveActivity()
+        saveCompletions()
     }
     
     // MARK: - Helpers & Statistics

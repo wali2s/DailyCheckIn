@@ -556,6 +556,11 @@ struct CreateActivityView: View {
         guard let activity = activityToEdit else { return }
         selectedRecurrenceType = activity.recurrence
         selectedPeriod = activity.period
+        targetMinutes = activity.targetMinutes
+        selectedWeekdays = activity.selectedWeekdays
+        daysPerMonth = activity.monthlyIntervalDays
+        enableNotification = activity.notificationsEnabled
+        notificationTime = activity.dailyTimes.first ?? Date()
         
         if let matchingPreset = presets.first(where: { $0.title == activity.title }) {
             creationMode = .presets
@@ -583,7 +588,10 @@ struct CreateActivityView: View {
             monthlyIntervalDays: selectedRecurrenceType == .monthly
                 ? daysPerMonth
                 : nil,
-            isActive: true,
+            targetDaysPerWeek: activityToEdit?.recurrence == selectedRecurrenceType
+                ? activityToEdit?.targetDaysPerWeek
+                : nil,
+            isActive: activityToEdit?.isActive ?? true,
             notificationsEnabled: enableNotification
         )
 
@@ -601,4 +609,3 @@ struct CreateActivityView: View {
         dismiss()
     }
 }
-

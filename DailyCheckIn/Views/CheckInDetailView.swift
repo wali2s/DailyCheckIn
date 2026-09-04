@@ -41,6 +41,10 @@ struct CheckInDetailView: View {
                 
                 metricsCard
                 
+                if !displayedFactors.isEmpty {
+                    factorsCard
+                }
+                
                 noteCard
                 
                 if !checkIn.tags.isEmpty {
@@ -173,17 +177,107 @@ struct CheckInDetailView: View {
             ) {
                 MetricRow(
                     title: "Energy",
-                    value: checkIn.energyLevel,
+                    value: Double(checkIn.energyLevel),
                     systemImage: "bolt.fill",
                     tint: AppColors.accentYellow
                 )
-                
+
                 MetricRow(
                     title: "Stress",
-                    value: checkIn.stressLevel,
+                    value: Double(checkIn.stressLevel),
                     systemImage: "waveform.path.ecg",
                     tint: AppColors.accentPink
                 )
+
+                MetricRow(
+                    title: "Focus",
+                    value: checkIn.focusLevel,
+                    systemImage: "brain.head.profile",
+                    tint: AppColors.accentBlue
+                )
+
+                MetricRow(
+                    title: "Social Battery",
+                    value: checkIn.socialBattery,
+                    systemImage: "battery.100.bolt",
+                    tint: AppColors.accentYellow
+                )
+
+                MetricRow(
+                    title: "Physical Comfort",
+                    value: checkIn.physicalTension,
+                    systemImage: "figure.walk",
+                    tint: AppColors.accentMint
+                )
+            }
+        }
+    }
+    
+    private struct DisplayedFactor: Identifiable {
+        let id: String
+        let title: String
+        let systemImage: String
+    }
+
+    private var displayedFactors: [DisplayedFactor] {
+        switch checkIn.space {
+        case .personal:
+            return checkIn.personalFactors.map { factor in
+                DisplayedFactor(
+                    id: "personal.\(factor.rawValue)",
+                    title: factor.title,
+                    systemImage: factor.systemImage
+                )
+            }
+
+        case .professional:
+            return checkIn.professionalFactors.map { factor in
+                DisplayedFactor(
+                    id: "professional.\(factor.rawValue)",
+                    title: factor.title,
+                    systemImage: factor.systemImage
+                )
+            }
+        }
+    }
+
+    private var factorsCard: some View {
+        detailCard(
+            title: "Selected Factors",
+            systemImage: "tag.fill"
+        ) {
+            LazyVGrid(
+                columns: [
+                    GridItem(
+                        .adaptive(minimum: 135),
+                        spacing: AppSpacing.small
+                    )
+                ],
+                alignment: .leading,
+                spacing: AppSpacing.small
+            ) {
+                ForEach(displayedFactors) { factor in
+                    Label(
+                        factor.title,
+                        systemImage: factor.systemImage
+                    )
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: .leading
+                    )
+                    .background(accentColor.opacity(0.14))
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: AppCornerRadius.small,
+                            style: .continuous
+                        )
+                    )
+                }
             }
         }
     }
@@ -324,7 +418,7 @@ private struct DetailRow: View {
 private struct MetricRow: View {
     
     let title: String
-    let value: Int
+    let value: Double
     let systemImage: String
     let tint: Color
     
@@ -345,7 +439,7 @@ private struct MetricRow: View {
                 
                 Spacer()
                 
-                Text("\(value)/5")
+                Text("\(Int(value.rounded()))/5")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(

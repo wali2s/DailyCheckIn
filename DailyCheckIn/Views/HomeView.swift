@@ -20,8 +20,9 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 headerSection
-
+                dailyStatusCard
                 spaceCarouselSection
+                
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
@@ -50,10 +51,11 @@ struct HomeView: View {
             ) { newCheckIn in
                 viewModel.addCheckIn(newCheckIn)
                 navigationSelectedSpace = nil
+                focusFirstOpenSpace()
             }
         }
         .onAppear {
-            spaceScrollPosition = activeSpace
+            focusFirstOpenSpace()
         }
         .onReceive(
             NotificationCenter.default.publisher(for: .checkInReminderSelected)
@@ -86,7 +88,6 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Header Section
 
     private var headerSection: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -106,10 +107,24 @@ struct HomeView: View {
             profileButton
         }
     }
+    
+    private func focusFirstOpenSpace() {
+        guard let openSpace = JournalSpace.allCases.first(where: {
+            viewModel.checkIn(for: $0) == nil
+        }) else {
+            return
+        }
+
+        withAnimation(
+            .spring(response: 0.38, dampingFraction: 0.84)
+        ) {
+            activeSpace = openSpace
+            spaceScrollPosition = openSpace
+        }
+    }
 
     private var profileButton: some View {
         Button {
-            // Profile / Settings action
         } label: {
             ZStack {
                 Circle()
@@ -126,6 +141,114 @@ struct HomeView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
         .accessibilityHint("Opens your profile settings.")
+    }
+    
+    // MARK: - DailyStaus
+
+    private var dailyStatusCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(dailyStatusColor.opacity(0.16))
+                        .frame(width: 46, height: 46)
+
+                    Image(systemName: dailyStatusIcon)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(dailyStatusColor)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Today's check-ins")
+                        .font(.headline)
+                        .foregroundStyle(AppColors.textPrimary)
+
+                    Text(viewModel.dailyCompletionMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+            }
+
+            HStack(spacing: 10) {
+                ForEach(JournalSpace.allCases) { space in
+                    let isCompleted = viewModel.checkIn(for: space) != nil
+
+                    Label(
+                        space.title,
+                        systemImage: isCompleted
+                        ? "checkmark.circle.fill"
+                        : space.iconName
+                    )
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(
+                        isCompleted
+                        ? AppColors.accentMint.opacity(0.8)
+                        : AppColors.textSecondary
+                    )
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(
+                        isCompleted
+                        ? AppColors.accentMint.opacity(0.14)
+                        : AppColors.warmCanvas
+                    )
+                    .clipShape(Capsule())
+                }
+            }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppColors.warmCanvas)
+                        .frame(height: 8)
+
+                    Capsule()
+                        .fill(AppColors.accentMint.opacity(0.8))
+                        .frame(
+                            width: geometry.size.width
+                                * viewModel.dailyCompletionProgress,
+                            height: 8
+                        )
+                }
+            }
+            .frame(height: 8)
+        }
+        .padding(18)
+        .background(AppColors.warmSurface)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.large,
+                style: .continuous
+            )
+        )
+        .shadow(
+            color: Color.black.opacity(0.035),
+            radius: 10,
+            x: 0,
+            y: 3
+        )
+        .accessibilityElement(children: .combine)
+    }
+    
+    private var dailyStatusColor: Color {
+        viewModel.completedSpacesToday == viewModel.totalSpaces
+        ? AppColors.accentMint.opacity(0.8)
+        : AppColors.primaryAction
+    }
+
+    private var dailyStatusIcon: String {
+        switch viewModel.completedSpacesToday {
+        case 0:
+            return "sun.max.fill"
+        case 1:
+            return "arrow.right.circle.fill"
+        default:
+            return "checkmark.seal.fill"
+        }
     }
 
     // MARK: - Space Carousel Section
@@ -243,6 +366,7 @@ struct HomeView: View {
             }
             .coordinateSpace(name: "spaceCarousel")
             .scrollIndicators(.hidden)
+            .accessibilityIdentifier("checkInSpaceCarousel")
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $spaceScrollPosition)
             .onChange(of: spaceScrollPosition) { _, newSpace in
@@ -289,7 +413,6 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Space Carousel Card
 
 // MARK: - Space Carousel Card
 
@@ -308,7 +431,6 @@ private struct SpaceCarouselCard: View {
         }
     }
 
-    // Asset-Name muss exakt dem Namen in Assets.xcassets entsprechen.
     private var imageName: String {
         switch space {
         case .personal:
