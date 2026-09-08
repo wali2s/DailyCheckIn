@@ -21,6 +21,9 @@ final class NotificationService:
     private let professionalReminderIdentifier =
         "professional.checkin.reminder"
     
+    static let pendingReminderTypeKey =
+        "pending_checkin_reminder_type"
+    
     init(
         notificationCenter: UNUserNotificationCenter =
             .current()
@@ -185,6 +188,11 @@ final class NotificationService:
             completionHandler()
             return
         }
+        
+        UserDefaults.standard.set(
+            reminderType,
+            forKey: Self.pendingReminderTypeKey
+        )
         
         NotificationCenter.default.post(
             name: .checkInReminderSelected,

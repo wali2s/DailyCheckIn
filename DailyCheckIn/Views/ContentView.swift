@@ -23,7 +23,10 @@ struct ContentView: View {
 
     @StateObject private var appLockViewModel =
         AppLockViewModel()
-    
+    @AppStorage("last_automatic_safety_backup_timestamp")
+    private var lastAutomaticSafetyBackupTimestamp = 0.0
+
+    private let exportService = CheckInExportService()
     
     init(
         storageService: CheckInStorageService = UserDefaultsCheckInStorageService()
@@ -33,6 +36,44 @@ struct ContentView: View {
                 storageService: storageService
             )
         )
+    }
+    
+    private func createAutomaticSafetyBackupIfNeeded() {
+        let hasData =
+            !viewModel.checkIns.isEmpty
+            || !activityViewModel.activities.isEmpty
+            || !activityViewModel.completions.isEmpty
+
+        guard hasData else {
+            return
+        }
+
+        let lastBackupDate = Date(
+            timeIntervalSince1970:
+                lastAutomaticSafetyBackupTimestamp
+        )
+
+        guard !Calendar.current.isDateInToday(
+            lastBackupDate
+        ) else {
+            return
+        }
+
+        let backup = DailyCheckInBackup(
+            checkIns: viewModel.checkIns,
+            activities: activityViewModel.activities,
+            activityCompletions: activityViewModel.completions
+        )
+
+        do {
+            _ = try exportService.makeSafetyBackupFile(
+                from: backup
+            )
+
+            lastAutomaticSafetyBackupTimestamp =
+                Date().timeIntervalSince1970
+        } catch {
+        }
     }
     
     var body: some View {
@@ -65,7 +106,7 @@ struct ContentView: View {
             .tag(1)
             
             NavigationStack {
-                HistoryView(viewModel: viewModel)
+                HistoryCalendarView(viewModel: viewModel)
             }
             .tabItem {
                 Label(
@@ -124,6 +165,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background {
+                createAutomaticSafetyBackupIfNeeded()
                 appLockViewModel.lock()
             }
         }

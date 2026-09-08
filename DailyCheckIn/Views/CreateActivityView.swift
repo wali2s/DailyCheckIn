@@ -51,6 +51,7 @@ struct CreateActivityView: View {
     // MARK: - Navigation / Step State
     @State private var currentStep: Int = 1
     
+    
     // MARK: - Form States
     @State private var creationMode: CreationMode = .presets
     @State private var selectedRecurrenceType: RecurrenceType = .daily
@@ -62,7 +63,8 @@ struct CreateActivityView: View {
     
     @State private var targetMinutes: Int = 15
     @State private var selectedWeekdays: Set<Int> = [2, 4, 6]
-    @State private var daysPerMonth: Int = 4
+    @State private var daysPerMonth: Int = 30
+    @State private var monthlyStartDate = Date()
     @State private var enableNotification: Bool = false
     @State private var notificationTime: Date = Date()
     
@@ -282,22 +284,46 @@ struct CreateActivityView: View {
 
             case .monthly:
                 VStack(alignment: .leading, spacing: AppSpacing.small) {
-                    Text("Target Days per Month")
+                    Text("Monthly Schedule")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(AppColors.textSecondary)
 
-                    HStack {
-                        Image(systemName: "calendar")
-                            .foregroundStyle(AppColors.primaryAction)
-                        
-                        Stepper("\(daysPerMonth) Days / Month", value: $daysPerMonth, in: 1...31)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    }
+                    Stepper(
+                        "Repeat every \(daysPerMonth) days",
+                        value: $daysPerMonth,
+                        in: 1...365
+                    )
+                    .font(
+                        .system(
+                            size: 16,
+                            weight: .semibold,
+                            design: .rounded
+                        )
+                    )
                     .padding(.horizontal, AppSpacing.standard)
                     .padding(.vertical, 12)
                     .background(AppColors.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: AppCornerRadius.standard
+                        )
+                    )
+
+                    DatePicker(
+                        "First due date",
+                        selection: $monthlyStartDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .padding(.horizontal, AppSpacing.standard)
+                    .padding(.vertical, 12)
+                    .background(AppColors.surface)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: AppCornerRadius.standard
+                        )
+                    )
                 }
             }
 
@@ -559,6 +585,7 @@ struct CreateActivityView: View {
         targetMinutes = activity.targetMinutes
         selectedWeekdays = activity.selectedWeekdays
         daysPerMonth = activity.monthlyIntervalDays
+        monthlyStartDate = activity.startDate
         enableNotification = activity.notificationsEnabled
         notificationTime = activity.dailyTimes.first ?? Date()
         
@@ -575,6 +602,9 @@ struct CreateActivityView: View {
     private func saveActivity() {
         let updatedActivity = Activity(
             id: activityToEdit?.id ?? UUID(),
+            startDate: selectedRecurrenceType == .monthly
+                ? monthlyStartDate
+                : (activityToEdit?.startDate ?? Date()),
             title: selectedTitle,
             subtitle: activityToEdit?.subtitle ?? "",
             iconName: selectedIconName,

@@ -17,6 +17,7 @@ enum RecurrenceType: String, Codable, CaseIterable, Identifiable {
 
 struct Activity: Identifiable, Codable {
     let id: UUID
+    var startDate: Date
     var title: String
     var subtitle: String
     var iconName: String
@@ -27,7 +28,6 @@ struct Activity: Identifiable, Codable {
     var selectedWeekdays: Set<Int>
     var monthlyIntervalDays: Int
     
-    // Ziel-Tage pro Woche (z. B. 7 für täglich, oder die Anzahl der ausgewählten Tage)
     var targetDaysPerWeek: Int
     
     var isActive: Bool
@@ -35,6 +35,7 @@ struct Activity: Identifiable, Codable {
     
     init(
         id: UUID = UUID(),
+        startDate: Date = Date(),
         title: String,
         subtitle: String = "",
         iconName: String = "",
@@ -49,6 +50,7 @@ struct Activity: Identifiable, Codable {
         notificationsEnabled: Bool = false
     ) {
         self.id = id
+        self.startDate = startDate
         self.title = title
         self.subtitle = subtitle
         self.iconName = iconName
@@ -77,5 +79,84 @@ struct Activity: Identifiable, Codable {
         
         self.isActive = isActive
         self.notificationsEnabled = notificationsEnabled
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case startDate
+        case title
+        case subtitle
+        case iconName
+        case period
+        case targetMinutes
+        case recurrence
+        case dailyTimes
+        case selectedWeekdays
+        case monthlyIntervalDays
+        case targetDaysPerWeek
+        case isActive
+        case notificationsEnabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(
+            keyedBy: CodingKeys.self
+        )
+
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            startDate: try container.decodeIfPresent(
+                Date.self,
+                forKey: .startDate
+            ) ?? Date(),
+            title: try container.decode(
+                String.self,
+                forKey: .title
+            ),
+            subtitle: try container.decodeIfPresent(
+                String.self,
+                forKey: .subtitle
+            ) ?? "",
+            iconName: try container.decodeIfPresent(
+                String.self,
+                forKey: .iconName
+            ) ?? "",
+            period: try container.decodeIfPresent(
+                ActivityPeriod.self,
+                forKey: .period
+            ) ?? .morning,
+            recurrence: try container.decodeIfPresent(
+                RecurrenceType.self,
+                forKey: .recurrence
+            ) ?? .daily,
+            targetMinutes: try container.decodeIfPresent(
+                Int.self,
+                forKey: .targetMinutes
+            ) ?? 15,
+            dailyTimes: try container.decodeIfPresent(
+                [Date].self,
+                forKey: .dailyTimes
+            ) ?? [Date()],
+            selectedWeekdays: try container.decodeIfPresent(
+                Set<Int>.self,
+                forKey: .selectedWeekdays
+            ),
+            monthlyIntervalDays: try container.decodeIfPresent(
+                Int.self,
+                forKey: .monthlyIntervalDays
+            ),
+            targetDaysPerWeek: try container.decodeIfPresent(
+                Int.self,
+                forKey: .targetDaysPerWeek
+            ),
+            isActive: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .isActive
+            ) ?? true,
+            notificationsEnabled: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .notificationsEnabled
+            ) ?? false
+        )
     }
 }

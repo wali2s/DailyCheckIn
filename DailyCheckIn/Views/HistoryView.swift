@@ -22,6 +22,9 @@ struct HistoryView: View {
     @State private var searchText = ""
     @State private var selectedCheckIn: CheckIn?
     
+    @State private var checkInsPendingDeletion: [CheckIn] = []
+    @State private var isShowingDeleteConfirmation = false
+    
     private var filteredCheckIns: [CheckIn] {
         let spaceFilteredCheckIns: [CheckIn]
         
@@ -106,6 +109,34 @@ struct HistoryView: View {
             ) { updatedCheckIn in
                 viewModel.addCheckIn(updatedCheckIn)
             }
+        }
+        .confirmationDialog(
+            checkInsPendingDeletion.count == 1
+                ? "Delete Check-In?"
+                : "Delete Check-Ins?",
+            isPresented: $isShowingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                checkInsPendingDeletion.count == 1
+                    ? "Delete Check-In"
+                    : "Delete Check-Ins",
+                role: .destructive
+            ) {
+                checkInsPendingDeletion.forEach { checkIn in
+                    viewModel.deleteCheckIn(checkIn)
+                }
+
+                checkInsPendingDeletion = []
+            }
+
+            Button("Cancel", role: .cancel) {
+                checkInsPendingDeletion = []
+            }
+        } message: {
+            Text(
+                "The selected check-in data will be permanently deleted."
+            )
         }
     }
     
@@ -203,13 +234,11 @@ struct HistoryView: View {
     private func deleteCheckIns(
         at offsets: IndexSet
     ) {
-        let checkInsToDelete = offsets.map {
+        checkInsPendingDeletion = offsets.map {
             filteredCheckIns[$0]
         }
-        
-        checkInsToDelete.forEach { checkIn in
-            viewModel.deleteCheckIn(checkIn)
-        }
+
+        isShowingDeleteConfirmation = true
     }
 }
 

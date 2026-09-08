@@ -321,9 +321,34 @@ struct SettingsView: View {
                 )
             }
             
-            Text(safetyBackupStatusText)
+            VStack(alignment: .leading, spacing: 6) {
+                Label(
+                    "Automatic safety backups",
+                    systemImage: "checkmark.shield.fill"
+                )
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.textPrimary)
+
+                Text(
+                    "Your data is backed up locally once per day when you leave the app. "
+                    + "The latest 10 safety backups are kept."
+                )
                 .font(.caption)
                 .foregroundStyle(AppColors.textSecondary)
+
+                Text(safetyBackupStatusText)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(AppColors.primaryAction)
+            }
+            .padding(12)
+            .background(AppColors.warmCanvas)
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.standard
+                )
+            )
             
             Button(role: .destructive) {
                 isShowingDataResetConfirmation = true

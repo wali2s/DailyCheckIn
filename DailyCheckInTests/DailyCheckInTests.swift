@@ -287,7 +287,11 @@ struct DailyCheckInTests {
         let storageService = InMemoryActivityStorageService()
         let viewModel = ActivityViewModel(storageService: storageService)
         let reminderTime = Date(timeIntervalSince1970: 1_725_315_600)
+        let startDate = Date(
+            timeIntervalSince1970: 1_725_315_600
+        )
         let activity = Activity(
+            startDate: startDate,
             title: "Read",
             subtitle: "A chapter before bed.",
             iconName: "book.fill",
@@ -315,6 +319,7 @@ struct DailyCheckInTests {
         #expect(savedActivity?.targetDaysPerWeek == 3)
         #expect(savedActivity?.isActive == false)
         #expect(savedActivity?.notificationsEnabled == true)
+        #expect(savedActivity?.startDate == startDate)
     }
     
     @Test
@@ -1350,6 +1355,196 @@ struct DailyCheckInTests {
 
         #expect(
             statisticsViewModel.activityMoodComparisons.isEmpty
+        )
+    }
+    
+    @Test
+    func deletingActivityAlsoDeletesItsCompletions() {
+        let storageService = InMemoryActivityStorageService()
+
+        let viewModel = ActivityViewModel(
+            storageService: storageService
+        )
+
+        let activityToDelete = Activity(
+            title: "Evening Walk"
+        )
+
+        let activityToKeep = Activity(
+            title: "Morning Reading"
+        )
+
+        let completionToDelete = ActivityCompletion(
+            activityID: activityToDelete.id
+        )
+
+        let completionToKeep = ActivityCompletion(
+            activityID: activityToKeep.id
+        )
+
+        viewModel.replaceStoredData(
+            activities: [
+                activityToDelete,
+                activityToKeep
+            ],
+            completions: [
+                completionToDelete,
+                completionToKeep
+            ]
+        )
+
+        viewModel.deleteActivity(activityToDelete)
+        #expect(viewModel.activities.count == 1)
+        #expect(viewModel.activities.first?.id == activityToKeep.id)
+        #expect(viewModel.activities.first?.title == "Morning Reading")
+        #expect(viewModel.completions == [completionToKeep])
+    }
+    
+    @Test
+    func decodingLegacyActivityAddsStartDate() throws {
+        let activityID = UUID()
+
+        let legacyJSON = """
+        {
+            "id": "\(activityID.uuidString)",
+            "title": "Legacy Activity"
+        }
+        """
+
+        let data = try #require(
+            legacyJSON.data(using: .utf8)
+        )
+
+        let activity = try JSONDecoder().decode(
+            Activity.self,
+            from: data
+        )
+
+        #expect(activity.id == activityID)
+        #expect(activity.title == "Legacy Activity")
+        #expect(activity.startDate <= Date())
+    }
+    
+    @Test
+    func monthlyActivityIsDueOnlyOnItsIntervalDays() {
+        let viewModel = ActivityViewModel(
+            storageService: InMemoryActivityStorageService()
+        )
+
+        let calendar = Calendar.current
+        let startDate = calendar.startOfDay(for: Date())
+
+        let activity = Activity(
+            startDate: startDate,
+            title: "Monthly Reflection",
+            recurrence: .monthly,
+            monthlyIntervalDays: 30
+        )
+
+        let dayTwentyNine = calendar.date(
+            byAdding: .day,
+            value: 29,
+            to: startDate
+        )!
+
+        let dayThirty = calendar.date(
+            byAdding: .day,
+            value: 30,
+            to: startDate
+        )!
+
+        #expect(
+            viewModel.isDue(
+                activity,
+                on: startDate
+            )
+        )
+
+        #expect(
+            !viewModel.isDue(
+                activity,
+                on: dayTwentyNine
+            )
+        )
+
+        #expect(
+            viewModel.isDue(
+                activity,
+                on: dayThirty
+            )
+        )
+    }
+    
+    @Test
+    func activityStartDatePersistsThroughEncoding() throws {
+        let calendar = Calendar.current
+
+        let startDate = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 10,
+                day: 15
+            )
+        )!
+
+        let activity = Activity(
+            startDate: startDate,
+            title: "Monthly Reflection",
+            recurrence: .monthly,
+            monthlyIntervalDays: 30
+        )
+
+        let data = try JSONEncoder().encode(activity)
+
+        let decodedActivity = try JSONDecoder().decode(
+            Activity.self,
+            from: data
+        )
+
+        #expect(decodedActivity.startDate == startDate)
+        #expect(decodedActivity.monthlyIntervalDays == 30)
+    }
+    
+    @Test
+    func nextMonthlyDueDateReturnsNextIntervalDay() throws {
+        let viewModel = ActivityViewModel(
+            storageService: InMemoryActivityStorageService()
+        )
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        let startDate = calendar.date(
+            byAdding: .day,
+            value: -29,
+            to: today
+        )!
+
+        let expectedDate = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: today
+        )!
+
+        let activity = Activity(
+            startDate: startDate,
+            title: "Monthly Reflection",
+            recurrence: .monthly,
+            monthlyIntervalDays: 30
+        )
+
+        let nextDueDate = try #require(
+            viewModel.nextMonthlyDueDate(
+                for: activity,
+                from: today
+            )
+        )
+
+        #expect(
+            calendar.isDate(
+                nextDueDate,
+                inSameDayAs: expectedDate
+            )
         )
     }
 }

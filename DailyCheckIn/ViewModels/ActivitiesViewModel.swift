@@ -189,8 +189,62 @@ final class ActivityViewModel: ObservableObject {
             let weekday = calendar.component(.weekday, from: date)
             return activity.selectedWeekdays.contains(weekday)
         case .monthly:
-            return true
+            let startOfStartDate = calendar.startOfDay(
+                for: activity.startDate
+            )
+
+            let startOfTargetDate = calendar.startOfDay(
+                for: date
+            )
+
+            let daysSinceStart = calendar.dateComponents(
+                [.day],
+                from: startOfStartDate,
+                to: startOfTargetDate
+            ).day ?? -1
+
+            let interval = max(
+                activity.monthlyIntervalDays,
+                1
+            )
+
+            return daysSinceStart >= 0
+                && daysSinceStart % interval == 0
         }
+    }
+    
+    func nextMonthlyDueDate(
+        for activity: Activity,
+        from date: Date = Date()
+    ) -> Date? {
+        guard activity.recurrence == .monthly else {
+            return nil
+        }
+
+        let today = Calendar.current.startOfDay(
+            for: date
+        )
+
+        let interval = max(
+            activity.monthlyIntervalDays,
+            1
+        )
+
+        for dayOffset in 0...interval {
+            guard let candidateDate = Calendar.current.date(
+                byAdding: .day,
+                value: dayOffset,
+                to: today
+            ) else {
+                continue
+            }
+
+            if isDue(activity, on: candidateDate) {
+                return candidateDate
+            }
+        }
+
+        return nil
     }
     
     func dueActivities(on date: Date = Date()) -> [Activity] {

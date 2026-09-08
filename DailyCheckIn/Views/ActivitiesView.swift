@@ -14,6 +14,9 @@ struct ActivitiesView: View {
     @State private var showingCreateSheet = false
     @State private var activityToEdit: Activity?
     
+    @State private var activityPendingDeletion: Activity?
+    @State private var isShowingActivityDeleteConfirmation = false
+    
     init(viewModel: ActivityViewModel = ActivityViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
@@ -111,6 +114,34 @@ struct ActivitiesView: View {
                     }
                 }
             }
+            .confirmationDialog(
+                "Delete Activity?",
+                isPresented: $isShowingActivityDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Activity", role: .destructive) {
+                    guard let activityPendingDeletion else {
+                        return
+                    }
+
+                    withAnimation {
+                        viewModel.deleteActivity(
+                            activityPendingDeletion
+                        )
+                    }
+
+                    self.activityPendingDeletion = nil
+                }
+
+                Button("Cancel", role: .cancel) {
+                    activityPendingDeletion = nil
+                }
+            } message: {
+                Text(
+                    "This also permanently deletes all saved "
+                    + "completions for this activity."
+                )
+            }
         }
     }
     
@@ -130,8 +161,8 @@ struct ActivitiesView: View {
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(role: .destructive) {
                     withAnimation {
-                        viewModel.deleteActivity(activity)
-                    }
+                        activityPendingDeletion = activity
+                        isShowingActivityDeleteConfirmation = true                    }
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
@@ -202,6 +233,29 @@ struct ActivitiesView: View {
                             .padding(.vertical, AppSpacing.extraSmall)
                             .background(AppColors.surfaceSecondary.opacity(activity.isActive ? 0.5 : 0.25))
                             .clipShape(Capsule())
+                    }
+                    if activity.recurrence == .monthly,
+                       let nextDueDate = viewModel.nextMonthlyDueDate(
+                            for: activity
+                       ) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.caption)
+                                .foregroundStyle(AppColors.primaryAction)
+
+                            Text(
+                                Calendar.current.isDateInToday(nextDueDate)
+                                    ? "Due today"
+                                    : "Next: "
+                                        + nextDueDate.formatted(
+                                            date: .abbreviated,
+                                            time: .omitted
+                                        )
+                            )
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppColors.textSecondary)
+                        }
                     }
                 }
                 
@@ -290,23 +344,16 @@ struct ActivitiesView: View {
                             
                             let weekday = calendar.component(.weekday, from: date)
                             
-                            let isScheduled: Bool = {
-                                switch activity.recurrence {
-                                case .daily:
-                                    return true
-                                case .weekly:
-                                    return activity.selectedWeekdays.contains(weekday)
-                                case .monthly:
-                                    return true
-                                }
-                            }()
+                            let isScheduled = viewModel.isDue(
+                                activity,
+                                on: date
+                            )
                             
                             VStack(spacing: 6) {
                                 Text(dayLabels[index])
                                     .font(.system(size: 13, weight: isToday ? .bold : .medium))
                                     .foregroundStyle(isToday ? AppColors.textPrimary : AppColors.textSecondary)
                                 
-                                // Kreisanzeige
                                 ZStack {
                                     Circle()
                                         .fill(
@@ -348,19 +395,11 @@ struct ActivitiesView: View {
     private func doneButtonSection(for activity: Activity) -> some View {
         let calendar = Calendar.current
         let today = Date()
-        
-        let todayWeekday = calendar.component(.weekday, from: today)
-        
-        let isScheduledForToday: Bool = {
-            switch activity.recurrence {
-            case .daily:
-                return true
-            case .weekly:
-                return activity.selectedWeekdays.contains(todayWeekday)
-            case .monthly:
-                return true
-            }
-        }()
+                
+        let isScheduledForToday = viewModel.isDue(
+            activity,
+            on: today
+        )
         
         let isTodayDone = viewModel.isCompleted(activity, on: today)
         let isFullyCompletedThisWeek = viewModel.isFullyCompletedForWeek(activity: activity)

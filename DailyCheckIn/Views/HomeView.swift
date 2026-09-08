@@ -56,35 +56,20 @@ struct HomeView: View {
         }
         .onAppear {
             focusFirstOpenSpace()
+            openPendingReminderIfNeeded()
         }
         .onReceive(
-            NotificationCenter.default.publisher(for: .checkInReminderSelected)
+            NotificationCenter.default.publisher(
+                for: .checkInReminderSelected
+            )
         ) { notification in
             guard let reminderType = notification.object as? String else {
                 return
             }
 
-            let selectedSpace: JournalSpace?
-
-            switch reminderType {
-            case "personal":
-                selectedSpace = .personal
-
-            case "professional":
-                selectedSpace = .professional
-
-            default:
-                selectedSpace = nil
-            }
-
-            guard let selectedSpace else {
-                return
-            }
-
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
-                activeSpace = selectedSpace
-                spaceScrollPosition = selectedSpace
-            }
+            openCheckInFromReminder(
+                reminderType: reminderType
+            )
         }
     }
 
@@ -120,6 +105,62 @@ struct HomeView: View {
         ) {
             activeSpace = openSpace
             spaceScrollPosition = openSpace
+        }
+    }
+    
+    
+    private func openPendingReminderIfNeeded() {
+        guard let reminderType = UserDefaults.standard.string(
+            forKey: NotificationService.pendingReminderTypeKey
+        ) else {
+            return
+        }
+
+        openCheckInFromReminder(
+            reminderType: reminderType
+        )
+    }
+
+    private func openCheckInFromReminder(
+        reminderType: String
+    ) {
+        UserDefaults.standard.removeObject(
+            forKey: NotificationService.pendingReminderTypeKey
+        )
+
+        let selectedSpace: JournalSpace?
+
+        switch reminderType {
+        case "personal":
+            selectedSpace = .personal
+
+        case "professional":
+            selectedSpace = .professional
+
+        default:
+            selectedSpace = nil
+        }
+
+        guard let selectedSpace else {
+            return
+        }
+
+        withAnimation(
+            .spring(
+                response: 0.38,
+                dampingFraction: 0.84
+            )
+        ) {
+            activeSpace = selectedSpace
+            spaceScrollPosition = selectedSpace
+        }
+
+        DispatchQueue.main.async {
+            guard viewModel.checkIn(for: selectedSpace) == nil else {
+                return
+            }
+
+            navigationSelectedSpace = selectedSpace
         }
     }
 
@@ -250,6 +291,8 @@ struct HomeView: View {
             return "checkmark.seal.fill"
         }
     }
+    
+    
 
     // MARK: - Space Carousel Section
 
@@ -414,6 +457,8 @@ struct HomeView: View {
 }
 
 
+
+
 // MARK: - Space Carousel Card
 
 private struct SpaceCarouselCard: View {
@@ -458,13 +503,11 @@ private struct SpaceCarouselCard: View {
             Spacer(minLength: 0)
 
             ZStack {
-                // Dezentes Leuchten hinter deinem Asset-Bild
                 Circle()
                     .fill(accentColor.opacity(0.24))
                     .frame(width: 178, height: 178)
                     .blur(radius: 22)
 
-                // Dein Bild aus Assets.xcassets
                 Image(imageName)
                     .resizable()
                     .scaledToFit()

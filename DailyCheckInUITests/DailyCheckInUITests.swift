@@ -52,4 +52,56 @@ final class DailyCheckInUITests: XCTestCase {
         )
     }
     
+    func testUserCanSwipeBetweenHistoryCalendarSpaces() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.tabBars.buttons["History"].tap()
+
+        let selectedSpace = app.otherElements[
+            "historyCalendarSelectedSpace"
+        ]
+
+        XCTAssertTrue(
+            selectedSpace.waitForExistence(timeout: 3)
+        )
+
+        XCTAssertEqual(selectedSpace.label, "Private")
+
+        let window = app.windows.firstMatch
+
+        let start = window.coordinate(
+            withNormalizedOffset: CGVector(
+                dx: 0.85,
+                dy: 0.45
+            )
+        )
+
+        let end = window.coordinate(
+            withNormalizedOffset: CGVector(
+                dx: 0.15,
+                dy: 0.45
+            )
+        )
+
+        start.press(
+            forDuration: 0.1,
+            thenDragTo: end
+        )
+
+        let workExpectation = expectation(
+            for: NSPredicate(
+                format: "label == %@",
+                "Work"
+            ),
+            evaluatedWith: selectedSpace
+        )
+
+        let result = XCTWaiter().wait(
+            for: [workExpectation],
+            timeout: 3
+        )
+
+        XCTAssertEqual(result, .completed)
+    }
 }
