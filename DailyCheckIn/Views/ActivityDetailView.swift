@@ -12,6 +12,8 @@ struct ActivityDetailView: View {
     let activity: Activity
     @ObservedObject var viewModel: ActivityViewModel
     let onCompletionToggle: () -> Void
+    let onEdit: () -> Void
+    
     
     @Environment(\.dismiss) private var dismiss
     
@@ -41,7 +43,8 @@ struct ActivityDetailView: View {
     init(
         activity: Activity,
         viewModel: ActivityViewModel,
-        onCompletionToggle: @escaping () -> Void
+        onCompletionToggle: @escaping () -> Void,
+        onEdit: @escaping () -> Void
     ) {
         self.activity = activity
         self.viewModel = viewModel
@@ -53,6 +56,7 @@ struct ActivityDetailView: View {
                 on: Date()
             )
         )
+        self.onEdit = onEdit
     }
     
     var body: some View {
@@ -159,6 +163,12 @@ struct ActivityDetailView: View {
             .navigationTitle("Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Edit") {
+                        onEdit()
+                    }
+                }
+                
                 ToolbarItem(
                     placement: .cancellationAction
                 ) {

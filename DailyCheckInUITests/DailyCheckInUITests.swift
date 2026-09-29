@@ -10,9 +10,21 @@ import XCTest
 
 final class DailyCheckInUITests: XCTestCase {
     
-    func testUserCanOpenProfessionalCheckInForm() {
+    private func launchCleanApp() -> XCUIApplication {
         let app = XCUIApplication()
+
+        app.launchArguments.append(
+            "UI_TESTING_RESET_DATA"
+        )
+
         app.launch()
+
+        return app
+    }
+    
+    
+    func testUserCanOpenProfessionalCheckInForm() {
+        let app = launchCleanApp()
 
         let carousel = app.scrollViews["checkInSpaceCarousel"]
 
@@ -53,8 +65,7 @@ final class DailyCheckInUITests: XCTestCase {
     }
     
     func testUserCanSwipeBetweenHistoryCalendarSpaces() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchCleanApp()
 
         app.tabBars.buttons["History"].tap()
 
@@ -103,5 +114,104 @@ final class DailyCheckInUITests: XCTestCase {
         )
 
         XCTAssertEqual(result, .completed)
+    }
+    
+    func testProfileButtonOpensSettings() {
+        let app = launchCleanApp()
+
+
+        let profileButton = app.buttons["Profile"]
+
+        XCTAssertTrue(
+            profileButton.waitForExistence(timeout: 3)
+        )
+
+        profileButton.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Settings"]
+                .waitForExistence(timeout: 3)
+        )
+    }
+    
+    
+    func testUserCanCreateFirstActivityFromEmptyState() {
+        let app = launchCleanApp()
+
+        app.tabBars.buttons["Activities"].tap()
+
+        let createActivityButton = app.buttons[
+            "createFirstActivityButton"
+        ]
+
+        XCTAssertTrue(
+            createActivityButton.waitForExistence(timeout: 3)
+        )
+
+        createActivityButton.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["New Activity"]
+                .waitForExistence(timeout: 3)
+        )
+    }
+    
+    func testUserCanStartFirstPersonalCheckInFromWelcomeCard() {
+        let app = launchCleanApp()
+
+        let privateButton = app.buttons[
+            "firstCheckInButton.personal"
+        ]
+
+        XCTAssertTrue(
+            privateButton.waitForExistence(timeout: 3)
+        )
+
+        privateButton.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["New Check-In"]
+                .waitForExistence(timeout: 3)
+        )
+
+        XCTAssertTrue(
+            app.buttons["continueCheckInButton.step1"]
+                .waitForExistence(timeout: 3)
+        )
+    }
+    
+    func testUserCanOpenLoyaltyPrograms() {
+        let app = launchCleanApp()
+
+        app.tabBars.buttons["Settings"].tap()
+
+        let rewardsButton = app.buttons[
+            "openLoyaltyProgramsButton"
+        ]
+
+        XCTAssertTrue(
+            rewardsButton.waitForExistence(timeout: 3)
+        )
+
+        rewardsButton.tap()
+
+        let rewardsView = app.scrollViews[
+            "loyaltyProgramsView"
+        ]
+
+        XCTAssertTrue(
+            rewardsView.waitForExistence(timeout: 3)
+        )
+
+        XCTAssertTrue(
+            app.staticTexts["Coffee Card"]
+                .waitForExistence(timeout: 3)
+        )
+
+        XCTAssertTrue(
+            app.staticTexts["Iced Drinks Card"]
+                .waitForExistence(timeout: 3)
+        )
+    
     }
 }

@@ -227,6 +227,18 @@ final class StatisticsViewModel: ObservableObject {
         }
     }
     
+    var hasCheckInsForSelectedSpace: Bool {
+        checkIns.contains { checkIn in
+            checkIn.space == selectedSpace
+        }
+    }
+
+    var shouldSuggestAllTime: Bool {
+        hasCheckInsForSelectedSpace
+            && selectedPeriod != .allTime
+            && filteredCheckIns.isEmpty
+    }
+    
     var averageMood: Double {
         average(
             filteredCheckIns.map {

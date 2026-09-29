@@ -13,7 +13,6 @@ class NotificationManager {
     
     private init() {}
     
-    // Berechtigung anfragen
     func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error = error {
@@ -84,7 +83,6 @@ class NotificationManager {
         }
     }
 
-    // Aliase zum Löschen
     func cancelNotification(for activityID: UUID) {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
             let idsToRemove = requests

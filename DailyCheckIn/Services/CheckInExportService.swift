@@ -9,34 +9,44 @@ import Foundation
 
 final class CheckInExportService {
     private let maximumSafetyBackupCount = 10
+
     private let encoder: JSONEncoder
-    
-    init() {
+    private let fileManager: FileManager
+    private let safetyBackupDirectoryURL: URL?
+
+    init(
+        fileManager: FileManager = .default,
+        safetyBackupDirectoryURL: URL? = nil
+    ) {
+        self.fileManager = fileManager
+        self.safetyBackupDirectoryURL =
+            safetyBackupDirectoryURL
+
         let encoder = JSONEncoder()
         encoder.outputFormatting = [
             .prettyPrinted,
             .sortedKeys
         ]
         encoder.dateEncodingStrategy = .iso8601
-        
+
         self.encoder = encoder
     }
-    
+
     func makeJSON(
         from checkIns: [CheckIn]
     ) throws -> String {
         let data = try encoder.encode(checkIns)
-        
+
         guard let jsonString = String(
             data: data,
             encoding: .utf8
         ) else {
             throw CheckInExportError.encodingFailed
         }
-        
+
         return jsonString
     }
-    
+
     func makeBackupData(
         from backup: DailyCheckInBackup
     ) throws -> Data {
@@ -46,27 +56,19 @@ final class CheckInExportService {
             throw CheckInExportError.encodingFailed
         }
     }
-    
+
     func makeBackupFile(
         from backup: DailyCheckInBackup
     ) throws -> URL {
         let data = try makeBackupData(from: backup)
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-
-        let uniqueID = UUID().uuidString
-
-        let fileName =
-            "DailyCheckIn-Backup-"
-            + dateFormatter.string(from: backup.exportedAt)
-            + "-"
-            + uniqueID
-            + ".json"
-
-        let fileURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(fileName)
+        let fileURL = fileManager.temporaryDirectory
+            .appendingPathComponent(
+                backupFileName(
+                    prefix: "DailyCheckIn-Backup",
+                    exportedAt: backup.exportedAt
+                )
+            )
 
         do {
             try data.write(
@@ -79,54 +81,30 @@ final class CheckInExportService {
             throw CheckInExportError.fileCreationFailed
         }
     }
-    
+
     func makeSafetyBackupFile(
         from backup: DailyCheckInBackup
     ) throws -> URL {
         let data = try makeBackupData(from: backup)
 
         do {
-            let applicationSupportURL = try FileManager.default.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
+            let backupDirectory = try safetyBackupDirectory(
+                createIfNeeded: true
             )
-
-            let backupDirectory = applicationSupportURL
-                .appendingPathComponent(
-                    "DailyCheckIn/SafetyBackups",
-                    isDirectory: true
-                )
-
-            try FileManager.default.createDirectory(
-                at: backupDirectory,
-                withIntermediateDirectories: true
-            )
-
-            let dateFormatter = DateFormatter()
-            dateFormatter.locale = Locale(
-                identifier: "en_US_POSIX"
-            )
-            dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-
-            let uniqueID = UUID().uuidString
-
-            let fileName =
-                "DailyCheckIn-Backup-"
-                + dateFormatter.string(from: backup.exportedAt)
-                + "-"
-                + uniqueID
-                + ".json"
 
             let fileURL = backupDirectory
-                .appendingPathComponent(fileName)
+                .appendingPathComponent(
+                    backupFileName(
+                        prefix: "DailyCheckIn-Backup",
+                        exportedAt: backup.exportedAt
+                    )
+                )
 
             try data.write(
                 to: fileURL,
                 options: .atomic
             )
-            
+
             removeOldSafetyBackups(
                 in: backupDirectory,
                 keeping: maximumSafetyBackupCount
@@ -137,21 +115,86 @@ final class CheckInExportService {
             throw CheckInExportError.fileCreationFailed
         }
     }
-    
-    private func removeOldSafetyBackups(
-        in backupDirectory: URL,
-        keeping maximumCount: Int
-    ) {
-        guard let fileURLs = try? FileManager.default.contentsOfDirectory(
+
+    func latestSafetyBackupFile() -> URL? {
+        do {
+            let backupDirectory = try safetyBackupDirectory(
+                createIfNeeded: false
+            )
+
+            return sortedSafetyBackupURLs(
+                in: backupDirectory
+            )
+            .first
+        } catch {
+            return nil
+        }
+    }
+
+    private func safetyBackupDirectory(
+        createIfNeeded: Bool
+    ) throws -> URL {
+        let backupDirectory: URL
+
+        if let safetyBackupDirectoryURL {
+            backupDirectory = safetyBackupDirectoryURL
+        } else {
+            let applicationSupportURL = try fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: createIfNeeded
+            )
+
+            backupDirectory = applicationSupportURL
+                .appendingPathComponent(
+                    "DailyCheckIn/SafetyBackups",
+                    isDirectory: true
+                )
+        }
+
+        if createIfNeeded {
+            try fileManager.createDirectory(
+                at: backupDirectory,
+                withIntermediateDirectories: true
+            )
+        }
+
+        return backupDirectory
+    }
+
+    private func backupFileName(
+        prefix: String,
+        exportedAt: Date
+    ) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(
+            identifier: "en_US_POSIX"
+        )
+        dateFormatter.dateFormat =
+            "yyyy-MM-dd_HH-mm-ss"
+
+        return prefix
+            + "-"
+            + dateFormatter.string(from: exportedAt)
+            + "-"
+            + UUID().uuidString
+            + ".json"
+    }
+
+    private func sortedSafetyBackupURLs(
+        in backupDirectory: URL
+    ) -> [URL] {
+        guard let fileURLs = try? fileManager.contentsOfDirectory(
             at: backupDirectory,
             includingPropertiesForKeys: [
                 .contentModificationDateKey
             ]
         ) else {
-            return
+            return []
         }
 
-        let safetyBackupURLs = fileURLs
+        return fileURLs
             .filter {
                 $0.pathExtension == "json"
                     && $0.lastPathComponent.hasPrefix(
@@ -161,68 +204,43 @@ final class CheckInExportService {
             .sorted { firstURL, secondURL in
                 let firstDate = try? firstURL.resourceValues(
                     forKeys: [.contentModificationDateKey]
-                ).contentModificationDate
+                )
+                .contentModificationDate
 
                 let secondDate = try? secondURL.resourceValues(
                     forKeys: [.contentModificationDateKey]
-                ).contentModificationDate
+                )
+                .contentModificationDate
 
-                return (firstDate ?? .distantPast)
-                    > (secondDate ?? .distantPast)
+                let resolvedFirstDate =
+                    firstDate ?? .distantPast
+
+                let resolvedSecondDate =
+                    secondDate ?? .distantPast
+
+                if resolvedFirstDate != resolvedSecondDate {
+                    return resolvedFirstDate > resolvedSecondDate
+                }
+
+                return firstURL.lastPathComponent
+                    > secondURL.lastPathComponent
             }
+    }
 
-        for oldBackupURL in safetyBackupURLs.dropFirst(maximumCount) {
-            try? FileManager.default.removeItem(
+    private func removeOldSafetyBackups(
+        in backupDirectory: URL,
+        keeping maximumCount: Int
+    ) {
+        let safetyBackupURLs = sortedSafetyBackupURLs(
+            in: backupDirectory
+        )
+
+        for oldBackupURL in safetyBackupURLs.dropFirst(
+            maximumCount
+        ) {
+            try? fileManager.removeItem(
                 at: oldBackupURL
             )
-        }
-    }
-    
-    func latestSafetyBackupFile() -> URL? {
-        do {
-            let applicationSupportURL = try FileManager.default.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: false
-            )
-
-            let backupDirectory = applicationSupportURL
-                .appendingPathComponent(
-                    "DailyCheckIn/SafetyBackups",
-                    isDirectory: true
-                )
-
-            let fileURLs = try FileManager.default.contentsOfDirectory(
-                at: backupDirectory,
-                includingPropertiesForKeys: [
-                    .contentModificationDateKey
-                ]
-            )
-
-            return fileURLs
-                .filter {
-                    $0.pathExtension == "json"
-                }
-                .sorted { firstURL, secondURL in
-                    let firstDate = try? firstURL
-                        .resourceValues(
-                            forKeys: [.contentModificationDateKey]
-                        )
-                        .contentModificationDate
-
-                    let secondDate = try? secondURL
-                        .resourceValues(
-                            forKeys: [.contentModificationDateKey]
-                        )
-                        .contentModificationDate
-
-                    return (firstDate ?? .distantPast)
-                        > (secondDate ?? .distantPast)
-                }
-                .first
-        } catch {
-            return nil
         }
     }
 }

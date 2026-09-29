@@ -11,6 +11,8 @@ struct HomeView: View {
 
     @ObservedObject var viewModel: HomeViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
+    
+    var onProfileTap: () -> Void = {}
 
     @State private var activeSpace: JournalSpace = .personal
     @State private var spaceScrollPosition: JournalSpace?
@@ -20,6 +22,9 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 headerSection
+                if viewModel.checkIns.isEmpty {
+                    firstCheckInWelcomeCard
+                }
                 dailyStatusCard
                 spaceCarouselSection
                 
@@ -166,22 +171,52 @@ struct HomeView: View {
 
     private var profileButton: some View {
         Button {
+            onProfileTap()
         } label: {
             ZStack {
                 Circle()
-                    .fill(AppColors.textPrimary.opacity(0.06))
+                    .fill(
+                        AppColors.accentMint.opacity(0.20)
+                    )
                     .frame(width: 48, height: 48)
 
-                Image(systemName: "person.fill")
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.textPrimary.opacity(0.65))
-                    .scaleEffect(1.35)
+                if profileInitial.isEmpty {
+                    Image(systemName: "person.fill")
+                        .font(.body)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.primaryAction)
+                } else {
+                    Text(profileInitial)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppColors.primaryAction)
+                }
+            }
+            .overlay {
+                Circle()
+                    .stroke(
+                        AppColors.accentMint.opacity(0.45),
+                        lineWidth: 1.5
+                    )
             }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
         .accessibilityHint("Opens your profile settings.")
+    }
+    
+
+    private var profileInitial: String {
+        let name = settingsViewModel.displayName
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        guard let firstCharacter = name.first else {
+            return ""
+        }
+
+        return String(firstCharacter).uppercased()
     }
     
     // MARK: - DailyStaus
@@ -292,7 +327,70 @@ struct HomeView: View {
         }
     }
     
+    //MARK: - Welcome CheckIN Card
     
+    private var firstCheckInWelcomeCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.title3)
+                    .foregroundStyle(AppColors.primaryAction)
+
+                Text("Your journal starts here")
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+            }
+
+            Text(
+                "A short check-in helps you notice how your private life and workday are going."
+            )
+            .font(.subheadline)
+            .foregroundStyle(AppColors.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                ForEach(JournalSpace.allCases) { space in
+                    Button {
+                        navigationSelectedSpace = space
+                    } label: {
+                        Label(
+                            space.title,
+                            systemImage: space.iconName
+                        )
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .foregroundStyle(AppColors.primaryAction)
+                        .background(
+                            AppColors.primaryAction.opacity(0.10)
+                        )
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius: AppCornerRadius.standard,
+                                style: .continuous
+                            )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(
+                        "firstCheckInButton.\(space.rawValue)"
+                    )
+                    .accessibilityLabel(
+                        "Start first \(space.title) check-in"
+                    )
+                }
+            }
+        }
+        .padding(18)
+        .background(AppColors.warmSurface)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.large,
+                style: .continuous
+            )
+        )
+    }
 
     // MARK: - Space Carousel Section
 

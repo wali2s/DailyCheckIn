@@ -3,6 +3,8 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import PhotosUI
+import UIKit
 
 private struct BackupShareFile: Identifiable {
     let url: URL
@@ -176,24 +178,69 @@ struct SettingsView: View {
     // MARK: - Cards
     
     private var profileCard: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.small) {
-            cardHeader(title: "Profile", systemImage: "person.fill")
-            
-            TextField("Your name", text: Binding(
-                get: { viewModel.displayName },
-                set: { viewModel.updateDisplayName($0) }
-            ))
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.small
+        ) {
+            cardHeader(
+                title: "Profile",
+                systemImage: "person.fill"
+            )
+
+            TextField(
+                "Your name",
+                text: Binding(
+                    get: { viewModel.displayName },
+                    set: { viewModel.updateDisplayName($0) }
+                )
+            )
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
             .padding(.horizontal, AppSpacing.standard)
             .padding(.vertical, 12)
             .background(AppColors.warmCanvas)
-            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: AppCornerRadius.standard
+                )
+            )
         }
         .padding(AppSpacing.standard)
         .background(AppColors.surface)
-        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.standard
+            )
+        )
     }
+    
+    @ViewBuilder
+    private var profileAvatar: some View {
+        Group {
+            if let imageData = viewModel.profileImageData,
+               let image = UIImage(data: imageData) {
+
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "person.fill")
+                    .font(.title2)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+        .frame(width: 72, height: 72)
+        .background(AppColors.warmCanvas)
+        .clipShape(Circle())
+        .overlay {
+            Circle()
+                .stroke(
+                    AppColors.accentMint.opacity(0.5),
+                    lineWidth: 2
+                )
+        }
+    }
+    
     
     private var languageCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
@@ -202,8 +249,11 @@ struct SettingsView: View {
             Picker("Language", selection: $appLanguage) {
                 Text("English").tag("en")
                 Text("Deutsch").tag("de")
+                Text("Türkçe").tag("tr")
+                Text("Español").tag("es")
+                Text("العربية").tag("ar")
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.navigationLink)
         }
         .padding(AppSpacing.standard)
         .background(AppColors.surface)

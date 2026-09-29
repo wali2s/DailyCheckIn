@@ -28,6 +28,8 @@ struct ContentView: View {
 
     private let exportService = CheckInExportService()
     
+    @State private var isShowingRewards = false
+    
     init(
         storageService: CheckInStorageService = UserDefaultsCheckInStorageService()
     ) {
@@ -76,80 +78,130 @@ struct ContentView: View {
         }
     }
     
+    private var rewardsButton: some View {
+        Button {
+            isShowingRewards = true
+        } label: {
+            Image(systemName: "qrcode")
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(AppColors.rewardsCream)
+                .frame(width: 56, height: 56)
+                .background(AppColors.rewardsEspresso)
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: 16,
+                        style: .continuous
+                    )
+                )
+                .overlay {
+                    RoundedRectangle(
+                        cornerRadius: 16,
+                        style: .continuous
+                    )
+                    .stroke(
+                        AppColors.rewardsCaramel.opacity(0.8),
+                        lineWidth: 1
+                    )
+                }
+                .shadow(
+                    color: Color.black.opacity(0.12),
+                    radius: 10,
+                    x: 0,
+                    y: 5
+                )
+        }
+        .accessibilityIdentifier("openLoyaltyProgramsButton")
+        .accessibilityLabel("Open Dein CheckIn Rewards")
+    }
+    
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack {
-                HomeView(
-                    viewModel: viewModel,
-                    settingsViewModel: settingsViewModel
-                )
+        ZStack(alignment: .bottomTrailing) {
+            TabView(selection: $selectedTab) {
+                NavigationStack {
+                    HomeView(
+                        viewModel: viewModel,
+                        settingsViewModel: settingsViewModel,
+                        onProfileTap: {
+                            selectedTab = 4
+                        }
+                    )
+                }
+                .tabItem {
+                    Label(
+                        "Home",
+                        systemImage: "house.fill"
+                    )
+                }
+                .tag(0)
+
+                NavigationStack {
+                    ActivitiesView(
+                        viewModel: activityViewModel
+                    )
+                }
+                .tabItem {
+                    Label(
+                        "Activities",
+                        systemImage: "sparkles"
+                    )
+                }
+                .tag(1)
+
+                NavigationStack {
+                    HistoryCalendarView(viewModel: viewModel)
+                }
+                .tabItem {
+                    Label(
+                        "History",
+                        systemImage: "clock.arrow.circlepath"
+                    )
+                }
+                .tag(2)
+
+                NavigationStack {
+                    StatisticsView(
+                        homeViewModel: viewModel,
+                        activityViewModel: activityViewModel
+                    )
+                }
+                .tabItem {
+                    Label(
+                        "Statistics",
+                        systemImage: "chart.bar.fill"
+                    )
+                }
+                .tag(3)
+
+                NavigationStack {
+                    SettingsView(
+                        homeViewModel: viewModel,
+                        activityViewModel: activityViewModel,
+                        viewModel: settingsViewModel,
+                        appLockViewModel: appLockViewModel
+                    )
+                }
+                .tabItem {
+                    Label(
+                        "Settings",
+                        systemImage: "gearshape.fill"
+                    )
+                }
+                .tag(4)
             }
-            .tabItem {
-                Label(
-                    "Home",
-                    systemImage: "house.fill"
-                )
-            }
-            .tag(0)
-            
-            NavigationStack {
-                ActivitiesView(
-                    viewModel: activityViewModel
-                )
-            }
-            .tabItem {
-                Label(
-                    "Activities",
-                    systemImage: "sparkles"
-                )
-            }
-            .tag(1)
-            
-            NavigationStack {
-                HistoryCalendarView(viewModel: viewModel)
-            }
-            .tabItem {
-                Label(
-                    "History",
-                    systemImage: "clock.arrow.circlepath"
-                )
-            }
-            .tag(2)
-            
-            NavigationStack {
-                StatisticsView(
-                    homeViewModel: viewModel,
-                    activityViewModel: activityViewModel
-                )
-            }
-            .tabItem {
-                Label(
-                    "Statistics",
-                    systemImage: "chart.bar.fill"
-                )
-            }
-            .tag(3)
-            
-            NavigationStack {
-                SettingsView(
-                    homeViewModel: viewModel,
-                    activityViewModel: activityViewModel,
-                    viewModel: settingsViewModel,
-                    appLockViewModel: appLockViewModel
-                )
-            }
-            .tabItem {
-                Label(
-                    "Settings",
-                    systemImage: "gearshape.fill"
-                )
-            }
-            .tag(4)
+
+            rewardsButton
+                .padding(.trailing, AppSpacing.standard)
+                .padding(.bottom, 72)
         }
         .environment(
-                \.locale,
-                Locale(identifier: appLanguage)
-            )
+            \.locale,
+            Locale(identifier: appLanguage)
+        )
+        .sheet(isPresented: $isShowingRewards) {
+            NavigationStack {
+                LoyaltyProgramsView()
+            }
+        }
         .overlay {
             if appLockViewModel.isEnabled
                 && !appLockViewModel.isUnlocked {

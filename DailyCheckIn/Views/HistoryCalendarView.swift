@@ -98,14 +98,10 @@ struct HistoryCalendarView: View {
 
             Section {
                 if selectedDayCheckIns.isEmpty {
-                    Text(
-                        "No \(selectedSpace.title.lowercased()) "
-                        + "check-in on this day."
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .listRowBackground(AppColors.warmSurface)
-                } else {
+                    emptySelectedDayCard
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }else {
                     ForEach(selectedDayCheckIns) { checkIn in
                         NavigationLink {
                             CheckInDetailView(
@@ -181,6 +177,47 @@ struct HistoryCalendarView: View {
         } message: {
             Text("This check-in will be permanently deleted.")
         }
+    }
+    
+    
+    private var emptySelectedDayCard: some View {
+        let tint = selectedSpace == .personal
+            ? AppColors.accentMint
+            : AppColors.accentBlue
+
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(tint.opacity(0.14))
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: "calendar.badge.exclamationmark")
+                    .foregroundStyle(tint)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(emptySelectedDayTitle)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textPrimary)
+
+                Text(emptySelectedDayMessage)
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(AppColors.warmSurface)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.standard,
+                style: .continuous
+            )
+        )
+        .accessibilityIdentifier("emptyHistoryDayCard")
     }
     
     private var monthNavigation: some View {
@@ -452,6 +489,15 @@ struct HistoryCalendarView: View {
                 for: space,
                 on: date
             )
+            
+            let hasNote = dayCheckIn.map {
+                !$0.note
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                    .isEmpty
+            } ?? false
+            
             let isSelected = calendar.isDate(
                 date,
                 inSameDayAs: selectedDate
@@ -479,13 +525,31 @@ struct HistoryCalendarView: View {
                             : AppColors.textPrimary
                     )
 
-                    Circle()
-                        .fill(
-                            dayCheckIn == nil
-                                ? Color.clear
-                                : (isSelected ? Color.white : tint)
-                        )
-                        .frame(width: 6, height: 6)
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(
+                                dayCheckIn == nil
+                                    ? Color.clear
+                                    : (isSelected ? Color.white : tint)
+                            )
+                            .frame(width: 6, height: 6)
+
+                        if hasNote {
+                            Image(systemName: "note.text")
+                                .font(
+                                    .system(
+                                        size: 8,
+                                        weight: .bold
+                                    )
+                                )
+                                .foregroundStyle(
+                                    isSelected
+                                        ? Color.white
+                                        : AppColors.accentYellow
+                                )
+                        }
+                    }
+                    .frame(height: 8)
                     
                 }
                 .frame(maxWidth: .infinity)
@@ -526,8 +590,9 @@ struct HistoryCalendarView: View {
             .accessibilityValue(
                 dayCheckIn == nil
                     ? "No \(space.title) check-in"
-                    : "\(space.title) check-in: "
-                        + dayCheckIn!.mood.title
+                : "\(space.title) check-in: "
+                    + dayCheckIn!.mood.title
+                    + (hasNote ? ", includes a note" : "")
             )
             .accessibilityHint(
                 isFuture
@@ -549,8 +614,7 @@ struct HistoryCalendarView: View {
             .font(.headline)
             .foregroundStyle(AppColors.textPrimary)
             
-            Text("Your personal weekly and monthly reflections will apear here.")
-                .font(.subheadline)
+            Text("Your personal weekly and monthly reflections will apear here.")                .font(.subheadline)
                 .foregroundStyle(AppColors.textSecondary)
             
             HStack(spacing: AppSpacing.standard) {
@@ -569,7 +633,7 @@ struct HistoryCalendarView: View {
             
             Text("Coming later with DailyCheckIn prime")
                 .font(.caption)
-                .foregroundStyle(AppColors.warmSurface)
+                .foregroundStyle(AppColors.textSecondary)
         }
         .padding(AppSpacing.cardPadding)
         .foregroundStyle(AppColors.textSecondary)
@@ -760,5 +824,23 @@ struct HistoryCalendarView: View {
         }
 
         selectedDate = monthInterval.start
+    }
+    
+    private var selectedSpaceHasCheckIns: Bool {
+        viewModel.checkIns.contains { checkIn in
+            checkIn.space == selectedSpace
+        }
+    }
+
+    private var emptySelectedDayTitle: String {
+        selectedSpaceHasCheckIns
+            ? "No check-in on this day"
+            : "No \(selectedSpace.title) check-ins yet"
+    }
+
+    private var emptySelectedDayMessage: String {
+        selectedSpaceHasCheckIns
+            ? "Days with a saved check-in are marked with a colored dot in the calendar."
+            : "Your \(selectedSpace.title.lowercased()) check-ins will appear here after you create them."
     }
 }

@@ -15,6 +15,7 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var displayName: String
     @Published private(set) var personalReminderTime: Date
     @Published private(set) var professionalReminderTime: Date
+    @Published private(set) var profileImageData: Data?
     
     @Published private(set) var statusMessage: String = ""
     
@@ -47,11 +48,10 @@ final class SettingsViewModel: ObservableObject {
     init(
         notificationService: NotificationService =
             NotificationService(),
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
     ) {
         self.notificationService = notificationService
         self.userDefaults = userDefaults
-        
         self.personalReminderEnabled = userDefaults.bool(
             forKey: personalReminderEnabledKey
         )
@@ -88,18 +88,23 @@ final class SettingsViewModel: ObservableObject {
             .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
-        
-        let finalName = trimmedName.isEmpty
-            ? "YourName"
-            : trimmedName
-        
-        displayName = finalName
-        
+
+        displayName = trimmedName
+
+        if trimmedName.isEmpty {
+            userDefaults.removeObject(
+                forKey: displayNameKey
+            )
+
+            statusMessage = "Name cleared."
+            return
+        }
+
         userDefaults.set(
-            finalName,
+            trimmedName,
             forKey: displayNameKey
         )
-        
+
         statusMessage = "Name updated."
     }
     

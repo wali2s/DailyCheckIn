@@ -35,14 +35,7 @@ final class UserDefaultsActivityStorageService: ActivityStorageService {
         guard let data = userDefaults.data(
             forKey: ActivitysStorageKey
         ) else {
-            return [
-                Activity(
-                    title: "20 min Guitar",
-                    subtitle: "Take some time for yourself.",
-                    iconName: "guitars.fill",
-                    period: .morning
-                )
-            ]
+            return []
         }
         
         do {

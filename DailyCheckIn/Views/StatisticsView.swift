@@ -91,16 +91,61 @@ struct StatisticsView: View {
     // MARK: - Empty State
 
     private var emptyStatisticsSection: some View {
-        ContentUnavailableView(
-            "No Statistics Yet",
-            systemImage: "chart.bar.xaxis",
-            description: Text("Create a check-in to see your statistics.")
-        )
-        .padding(.vertical, 40)
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(AppColors.accentBlue.opacity(0.15))
+                    .frame(width: 76, height: 76)
+
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(AppColors.accentBlue)
+            }
+
+            VStack(spacing: 7) {
+                Text(emptyStatisticsTitle)
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+
+                Text(emptyStatisticsMessage)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if viewModel.shouldSuggestAllTime {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        viewModel.selectedPeriod = .allTime
+                    }
+                } label: {
+                    Label(
+                        "Show all check-ins",
+                        systemImage: "clock.arrow.circlepath"
+                    )
+                }
+                .buttonStyle(.bordered)
+                .tint(AppColors.primaryAction)
+                .accessibilityIdentifier("showAllStatisticsButton")
+            }
+        }
+        .padding(22)
         .frame(maxWidth: .infinity)
         .background(AppColors.warmSurface)
-        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 2)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.standard,
+                style: .continuous
+            )
+        )
+        .shadow(
+            color: Color.black.opacity(0.03),
+            radius: 8,
+            x: 0,
+            y: 2
+        )
+        .accessibilityIdentifier("emptyStatisticsSection")
     }
 
     // MARK: - Mood Trend Card
@@ -1024,6 +1069,30 @@ struct StatisticsView: View {
     ) -> String {
         let sign = difference > 0 ? "+" : ""
         return "\(sign)\(formattedScore(difference))"
+    }
+    
+    private var emptyStatisticsTitle: String {
+        if viewModel.checkIns.isEmpty {
+            return "Your patterns will appear here"
+        }
+
+        if !viewModel.hasCheckInsForSelectedSpace {
+            return "No \(viewModel.selectedSpace.title) check-ins yet"
+        }
+
+        return "No check-ins in this period"
+    }
+
+    private var emptyStatisticsMessage: String {
+        if viewModel.checkIns.isEmpty {
+            return "Complete your first check-in to start building a picture of your mood, energy, focus, and more."
+        }
+
+        if !viewModel.hasCheckInsForSelectedSpace {
+            return "Try switching to the other space, or create your first \(viewModel.selectedSpace.title) check-in."
+        }
+
+        return "You have \(viewModel.selectedSpace.title.lowercased()) check-ins, but none in \(viewModel.selectedPeriod.title.lowercased())."
     }
 }
 

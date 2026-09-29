@@ -16,9 +16,6 @@ struct CheckInView: View {
     @State private var currentStep = 0
     @State private var moodScrollPosition: Mood?
     
-    // Die Timer-Variablen 'showDots' und 'hideDotsTask' werden entfernt,
-    // da wir die Sichtbarkeit geometrisch steuern.
-    
     let isEditing: Bool
     let onSave: (CheckIn) -> Void
     

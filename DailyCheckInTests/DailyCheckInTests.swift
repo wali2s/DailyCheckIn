@@ -930,6 +930,14 @@ struct DailyCheckInTests {
         )
     }
     
+    private func makeTestSafetyBackupDirectory() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "DailyCheckInTests-\(UUID().uuidString)",
+                isDirectory: true
+            )
+    }
+    
     @Test
     func exportServiceCreatesSafetyBackupBeforeImport() throws {
         let backup = DailyCheckInBackup(
@@ -943,19 +951,28 @@ struct DailyCheckInTests {
             activityCompletions: []
         )
 
-        let exportService = CheckInExportService()
+        let backupDirectory =
+            makeTestSafetyBackupDirectory()
+
+        defer {
+            try? FileManager.default.removeItem(
+                at: backupDirectory
+            )
+        }
+
+        let exportService = CheckInExportService(
+            safetyBackupDirectoryURL: backupDirectory
+        )
 
         let fileURL = try exportService.makeSafetyBackupFile(
             from: backup
         )
 
-        defer {
-            try? FileManager.default.removeItem(
-                at: fileURL
+        #expect(
+            FileManager.default.fileExists(
+                atPath: fileURL.path
             )
-        }
-
-        #expect(FileManager.default.fileExists(atPath: fileURL.path))
+        )
         #expect(fileURL.pathExtension == "json")
 
         let data = try Data(contentsOf: fileURL)
@@ -971,7 +988,7 @@ struct DailyCheckInTests {
         #expect(restoredBackup.checkIns.count == 1)
         #expect(restoredBackup.checkIns.first?.mood == .good)
     }
-    
+
     @Test
     func exportServiceFindsLatestSafetyBackup() throws {
         let backup = DailyCheckInBackup(
@@ -985,17 +1002,23 @@ struct DailyCheckInTests {
             activityCompletions: []
         )
 
-        let exportService = CheckInExportService()
-
-        let safetyBackupURL = try exportService.makeSafetyBackupFile(
-            from: backup
-        )
+        let backupDirectory =
+            makeTestSafetyBackupDirectory()
 
         defer {
             try? FileManager.default.removeItem(
-                at: safetyBackupURL
+                at: backupDirectory
             )
         }
+
+        let exportService = CheckInExportService(
+            safetyBackupDirectoryURL: backupDirectory
+        )
+
+        let safetyBackupURL = try exportService
+            .makeSafetyBackupFile(
+                from: backup
+            )
 
         let latestBackupURL = try #require(
             exportService.latestSafetyBackupFile()
@@ -1547,6 +1570,83 @@ struct DailyCheckInTests {
             )
         )
     }
+    @Test
+    func testNewActivityStorageStartsEmpty() {
+        let suiteName = "ActivityStorageTests.\(UUID().uuidString)"
+
+        let userDefaults = UserDefaults(
+            suiteName: suiteName
+        )!
+
+        #expect(
+            UserDefaults(suiteName: suiteName) != nil,
+            "Could not create isolated UserDefaults."
+        )
+
+        defer {
+            userDefaults.removePersistentDomain(
+                forName: suiteName
+            )
+        }
+
+        let storageService = UserDefaultsActivityStorageService(
+            userDefaults: userDefaults
+        )
+
+        #expect(storageService.loadActivities().isEmpty)
+    }
+    
+    @Test
+    func loyaltyProgramCalculatesProgressAndRewardState() {
+        let program = LoyaltyProgram(
+            id: "coffee-card",
+            title: "Coffee Card",
+            subtitle: "Collect 7 coffees",
+            iconName: "cup.and.saucer.fill",
+            rewardTitle: "1 coffee on us",
+            requiredPoints: 7,
+            earnedPoints: 5,
+            isActive: true
+        )
+
+        #expect(program.remainingPoints == 2)
+        #expect(program.isRewardReady == false)
+
+        let completedProgram = LoyaltyProgram(
+            id: "coffee-card",
+            title: "Coffee Card",
+            subtitle: "Collect 7 coffees",
+            iconName: "cup.and.saucer.fill",
+            rewardTitle: "1 coffee on us",
+            requiredPoints: 7,
+            earnedPoints: 7,
+            isActive: true
+        )
+
+        #expect(completedProgram.availableRewards == 1)
+        #expect(completedProgram.pointsTowardNextReward == 0)
+        #expect(completedProgram.isRewardReady == true)
+    }
+    
+    @Test
+    func loyaltyProgramKeepsRemainingPointsAfterReward() {
+        let program = LoyaltyProgram(
+            id: "coffee-card",
+            title: "Coffee Card",
+            subtitle: "Collect 7 coffees",
+            iconName: "cup.and.saucer.fill",
+            rewardTitle: "1 coffee on us",
+            requiredPoints: 7,
+            earnedPoints: 9,
+            isActive: true
+        )
+
+        #expect(program.availableRewards == 1)
+        #expect(program.pointsTowardNextReward == 2)
+        #expect(program.remainingPoints == 5)
+        #expect(program.isRewardReady == true)
+    }
+    
 }
 
 private final class InMemoryCheckInStorageService: CheckInStorageService {

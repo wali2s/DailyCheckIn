@@ -16,6 +16,7 @@ struct ActivitiesView: View {
     
     @State private var activityPendingDeletion: Activity?
     @State private var isShowingActivityDeleteConfirmation = false
+    @State private var activityForDetails: Activity?
     
     init(viewModel: ActivityViewModel = ActivityViewModel()) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -114,6 +115,24 @@ struct ActivitiesView: View {
                     }
                 }
             }
+            .sheet(item: $activityForDetails) { activity in
+                ActivityDetailView(
+                    activity: activity,
+                    viewModel: viewModel,
+                    onCompletionToggle: {
+                        withAnimation {
+                            viewModel.toggleCompletion(for: activity)
+                        }
+                    },
+                    onEdit: {
+                        activityForDetails = nil
+
+                        DispatchQueue.main.async {
+                            activityToEdit = activity
+                        }
+                    }
+                )
+            }
             .confirmationDialog(
                 "Delete Activity?",
                 isPresented: $isShowingActivityDeleteConfirmation,
@@ -123,16 +142,16 @@ struct ActivitiesView: View {
                     guard let activityPendingDeletion else {
                         return
                     }
-
+                    
                     withAnimation {
                         viewModel.deleteActivity(
                             activityPendingDeletion
                         )
                     }
-
+                    
                     self.activityPendingDeletion = nil
                 }
-
+                
                 Button("Cancel", role: .cancel) {
                     activityPendingDeletion = nil
                 }
@@ -236,21 +255,21 @@ struct ActivitiesView: View {
                     }
                     if activity.recurrence == .monthly,
                        let nextDueDate = viewModel.nextMonthlyDueDate(
-                            for: activity
+                        for: activity
                        ) {
                         HStack(spacing: 5) {
                             Image(systemName: "calendar.badge.clock")
                                 .font(.caption)
                                 .foregroundStyle(AppColors.primaryAction)
-
+                            
                             Text(
                                 Calendar.current.isDateInToday(nextDueDate)
-                                    ? "Due today"
-                                    : "Next: "
-                                        + nextDueDate.formatted(
-                                            date: .abbreviated,
-                                            time: .omitted
-                                        )
+                                ? "Due today"
+                                : "Next: "
+                                + nextDueDate.formatted(
+                                    date: .abbreviated,
+                                    time: .omitted
+                                )
                             )
                             .font(.caption)
                             .fontWeight(.medium)
@@ -315,87 +334,85 @@ struct ActivitiesView: View {
         .shadow(color: Color.black.opacity(activity.isActive ? 0.04 : 0.01), radius: 8, x: 0, y: 3)
         .contentShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
         .onTapGesture {
-            if activity.isActive {
-                activityToEdit = activity
-            }
+            activityForDetails = activity
         }
     }
     
     // MARK: - Week Days Tracker Subview
-        @ViewBuilder
-        private func weekDaysTrackerView(for activity: Activity) -> some View {
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
+    @ViewBuilder
+    private func weekDaysTrackerView(for activity: Activity) -> some View {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        if let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today) {
+            let weekDates: [Date] = (0..<7).compactMap { dayOffset in
+                calendar.date(byAdding: .day, value: dayOffset, to: weekInterval.start)
+            }
             
-            if let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today) {
-                let weekDates: [Date] = (0..<7).compactMap { dayOffset in
-                    calendar.date(byAdding: .day, value: dayOffset, to: weekInterval.start)
-                }
-                
-                let dayLabels = ["M", "T", "W", "T", "F", "S", "S"]
-                
-                HStack {
-                    Spacer()
-                    HStack(spacing: 16) {
-                        ForEach(0..<weekDates.count, id: \.self) { index in
-                            let date = weekDates[index]
-                            let isToday = calendar.isDate(date, inSameDayAs: today)
-                            let isCompleted = viewModel.isCompleted(activity, on: date)
+            let dayLabels = ["M", "T", "W", "T", "F", "S", "S"]
+            
+            HStack {
+                Spacer()
+                HStack(spacing: 16) {
+                    ForEach(0..<weekDates.count, id: \.self) { index in
+                        let date = weekDates[index]
+                        let isToday = calendar.isDate(date, inSameDayAs: today)
+                        let isCompleted = viewModel.isCompleted(activity, on: date)
+                        
+                        let weekday = calendar.component(.weekday, from: date)
+                        
+                        let isScheduled = viewModel.isDue(
+                            activity,
+                            on: date
+                        )
+                        
+                        VStack(spacing: 6) {
+                            Text(dayLabels[index])
+                                .font(.system(size: 13, weight: isToday ? .bold : .medium))
+                                .foregroundStyle(isToday ? AppColors.textPrimary : AppColors.textSecondary)
                             
-                            let weekday = calendar.component(.weekday, from: date)
-                            
-                            let isScheduled = viewModel.isDue(
-                                activity,
-                                on: date
-                            )
-                            
-                            VStack(spacing: 6) {
-                                Text(dayLabels[index])
-                                    .font(.system(size: 13, weight: isToday ? .bold : .medium))
-                                    .foregroundStyle(isToday ? AppColors.textPrimary : AppColors.textSecondary)
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        !isScheduled
+                                        ? Color(.systemGray6)
+                                        : (isCompleted ? AppColors.accentMint : AppColors.surfaceSecondary.opacity(0.6)) // Eingeplant: Grün wenn Done, sonst Sekundärfarbe
+                                    )
+                                    .frame(width: 32, height: 32)
                                 
-                                ZStack {
-                                    Circle()
-                                        .fill(
-                                            !isScheduled
-                                            ? Color(.systemGray6)
-                                            : (isCompleted ? AppColors.accentMint : AppColors.surfaceSecondary.opacity(0.6)) // Eingeplant: Grün wenn Done, sonst Sekundärfarbe
-                                        )
-                                        .frame(width: 32, height: 32)
-                                    
-                                    if !isScheduled {
-                                        Image(systemName: "minus")
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundStyle(AppColors.textSecondary.opacity(0.6))
-                                    } else if isCompleted {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundStyle(.white)
-                                    } else {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(AppColors.textSecondary.opacity(0.5))
-                                    }
+                                if !isScheduled {
+                                    Image(systemName: "minus")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(AppColors.textSecondary.opacity(0.6))
+                                } else if isCompleted {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundStyle(.white)
+                                } else {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AppColors.textSecondary.opacity(0.5))
                                 }
-                                .overlay(
-                                    Circle()
-                                        .stroke(isToday && isScheduled && !isCompleted ? AppColors.accentMint : Color.clear, lineWidth: 2)
-                                )
                             }
+                            .overlay(
+                                Circle()
+                                    .stroke(isToday && isScheduled && !isCompleted ? AppColors.accentMint : Color.clear, lineWidth: 2)
+                            )
                         }
                     }
-                    Spacer()
                 }
-            } else {
-                EmptyView()
+                Spacer()
             }
+        } else {
+            EmptyView()
         }
+    }
     
     // MARK: - Dynamic Done / Undone / Completed Button Subview
     private func doneButtonSection(for activity: Activity) -> some View {
         let calendar = Calendar.current
         let today = Date()
-                
+        
         let isScheduledForToday = viewModel.isDue(
             activity,
             on: today
@@ -420,7 +437,7 @@ struct ActivitiesView: View {
             buttonTitle = "Done"
             iconName = "circle"
         }
-
+        
         return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 viewModel.toggleCompletion(for: activity, on: today)
@@ -459,8 +476,8 @@ struct ActivitiesView: View {
         let total = viewModel.weeklyTargetCount()
         
         let progress: Double = total > 0
-            ? Double(completed) / Double(total)
-            : 0
+        ? Double(completed) / Double(total)
+        : 0
         
         return VStack(
             alignment: .leading,
@@ -665,33 +682,60 @@ struct ActivitiesView: View {
     }
     
     // MARK: - Empty State
+    
     private var emptyStateView: some View {
-        VStack(spacing: AppSpacing.standard) {
-            Image(systemName: "plus.circle.dashed")
-                .font(.system(size: 48))
-                .foregroundStyle(AppColors.textSecondary)
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(AppColors.accentMint.opacity(0.16))
+                    .frame(width: 76, height: 76)
+                
+                Image(systemName: "figure.walk")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(AppColors.accentMint)
+            }
             
-            Text("No activities planned yet")
-                .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
-            
-            Text("Tap the plus icon in the top right corner to pick from preset activities or create your own.")
+            VStack(spacing: 7) {
+                Text("Make time for what matters")
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                
+                Text(
+                    "Create an activity for habits, wellbeing, or a small goal you want to keep in sight."
+                )
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(AppColors.textSecondary)
-                .padding(.horizontal, AppSpacing.standard)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Button {
+                showingCreateSheet = true
+            } label: {
+                Label(
+                    "Create your first activity",
+                    systemImage: "plus"
+                )
+            }
+            .buttonStyle(
+                PrimaryButtonStyle(
+                    backgroundColor: AppColors.primaryAction.opacity(0.9)
+                )
+            )
+            .accessibilityIdentifier("createFirstActivityButton")
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, AppSpacing.extraLarge)
+        .padding(22)
         .appCardStyle(backgroundColor: AppColors.warmSurface)
     }
-}
-// MARK: - Previews
-#Preview("Default State") {
-    ActivitiesView()
-}
-
-#Preview("Dark Mode") {
-    ActivitiesView()
-        .preferredColorScheme(.dark)
+    
+    // MARK: - Previews
+    #Preview("Default State") {
+        ActivitiesView()
+    }
+    
+    #Preview("Dark Mode") {
+        ActivitiesView()
+            .preferredColorScheme(.dark)
+    }
 }
