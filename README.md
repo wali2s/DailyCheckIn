@@ -63,3 +63,34 @@ DailyCheckIn
 ├── UI
 ├── ViewModels
 └── Views
+
+
+Running the Project
+1. Clone this repository.
+2. Open DailyCheckIn.xcodeproj in Xcode.
+3. Select an iPhone simulator or physical iPhone.
+4. Build and run the DailyCheckIn target.
+Testing
+The project includes unit tests and UI tests.
+Cmd + U
+Use a dedicated simulator for UI tests. UI tests intentionally reset local data to guarantee a clean test state.
+Roadmap
+- Daily Personal and Work check-ins
+- Activities and reminders
+- Calendar history
+- Statistics
+- Import, export, and local safety backups
+- Face ID / device passcode protection
+- Dein CheckIn Rewards UI prototype
+- Optional private iCloud safety backup
+- Full localization
+- AI-powered daily, weekly, and monthly insights for Prime members
+- Secure QR-based rewards validation for the Dein CheckIn coffee pilot
+Dein CheckIn Concept
+DailyCheckIn is also the foundation for a future coffee-to-go concept called Dein CheckIn.
+The idea is simple:
+Take a short moment for yourself — with a good drink.
+
+The app remains a personal reflection tool. A future optional rewards area may allow customers to collect points after purchases at a Dein CheckIn coffee stand.
+Status
+DailyCheckIn is currently in active development and is not yet released on the App Store.
