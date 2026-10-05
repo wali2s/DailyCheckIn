@@ -8,14 +8,6 @@
 import Foundation
 import Combine
 
-enum ReflectionInputType: String, CaseIterable, Identifiable {
-    case sliders = "Gefühls-Check"
-    case note = "Notiz"
-    
-    var id: String { self.rawValue }
-}
-
-
 final class CheckInViewModel: ObservableObject {
     
     let space: JournalSpace
@@ -97,7 +89,6 @@ final class CheckInViewModel: ObservableObject {
         }
     }
     
-    @Published var reflectionType: ReflectionInputType = .sliders
     @Published var mood: Mood
     @Published var energyLevel: Int
     @Published var stressLevel: Int

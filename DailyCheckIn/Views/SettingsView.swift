@@ -86,7 +86,15 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.large)
         .background(AppColors.warmCanvas.ignoresSafeArea())
         .sheet(item: $backupShareFile) { backupFile in
-            ShareSheet(items: [backupFile.url])
+            ShareSheet(
+                items: [backupFile.url]
+            ) { completed in
+                guard completed else {
+                    return
+                }
+
+                viewModel.markManualBackupExportCompleted()
+            }
         }
         .alert(
             "Export unavailable",
@@ -295,9 +303,63 @@ struct SettingsView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.standard))
     }
     
+    private var hasBackupableData: Bool {
+        !homeViewModel.checkIns.isEmpty
+            || !activityViewModel.activities.isEmpty
+            || !activityViewModel.completions.isEmpty
+    }
+    
+    private var manualBackupExportReminderCard: some View {
+        HStack(
+            alignment: .top,
+            spacing: AppSpacing.small
+        ) {
+            Image(systemName: "externaldrive.badge.exclamationmark")
+                .font(.title3)
+                .foregroundStyle(AppColors.accentYellow)
+
+            VStack(
+                alignment: .leading,
+                spacing: AppSpacing.extraSmall
+            ) {
+                Text("Create an external backup")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textPrimary)
+
+                Text(
+                    "Export your data to Files or iCloud Drive. "
+                    + "Local safety backups are deleted if the app is removed."
+                )
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding(AppSpacing.compact)
+        .background(
+            AppColors.accentYellow.opacity(0.14)
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: AppCornerRadius.standard,
+                style: .continuous
+            )
+        )
+        .accessibilityIdentifier(
+            "manualBackupExportReminder"
+        )
+    }
+    
     private var dataCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.small) {
             cardHeader(title: "Data", systemImage: "externaldrive.fill")
+            if hasBackupableData
+                && viewModel.needsManualBackupExportReminder() {
+
+                manualBackupExportReminderCard
+            }
             
             Button {
                 exportBackup()
@@ -322,6 +384,13 @@ struct SettingsView: View {
                     )
                 )
             }
+            .disabled(!hasBackupableData)
+            
+            Text(manualBackupExportStatusText)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(AppColors.textSecondary)
+                .padding(.horizontal, 4)
             
             Button {
                 isShowingBackupImporter = true
@@ -551,6 +620,24 @@ struct SettingsView: View {
 
         return "Latest safety backup: "
             + date.formatted(
+                date: .abbreviated,
+                time: .shortened
+            )
+    }
+    
+    private var manualBackupExportStatusText: String {
+        guard hasBackupableData else {
+            return "Create your first check-in to enable backups."
+        }
+
+        guard let exportDate =
+            viewModel.lastManualBackupExportDate
+        else {
+            return "No external backup created yet."
+        }
+
+        return "Last external backup: "
+            + exportDate.formatted(
                 date: .abbreviated,
                 time: .shortened
             )

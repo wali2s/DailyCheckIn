@@ -18,11 +18,14 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var profileImageData: Data?
     
     @Published private(set) var statusMessage: String = ""
+    @Published private(set) var lastManualBackupExportDate: Date?
     
     private let notificationService: NotificationService
     private let userDefaults: UserDefaults
     private let calendar = Calendar.current
     private let displayNameKey = "display_name"
+    private let lastManualBackupExportTimestampKey =
+        "last_manual_backup_export_timestamp"
 
     
     private var cancellables = Set<AnyCancellable>()
@@ -79,6 +82,14 @@ final class SettingsViewModel: ObservableObject {
         self.displayName = userDefaults.string(
             forKey: displayNameKey
         ) ?? "YourName"
+        let exportTimestamp = userDefaults.double(
+            forKey: lastManualBackupExportTimestampKey
+        )
+
+        self.lastManualBackupExportDate =
+            exportTimestamp > 0
+            ? Date(timeIntervalSince1970: exportTimestamp)
+            : nil
     }
     
     func updateDisplayName(
@@ -333,6 +344,34 @@ final class SettingsViewModel: ObservableObject {
         return Calendar.current.date(
             from: components
         ) ?? Date()
+    }
+    
+    func markManualBackupExportCompleted(
+        on date: Date = Date()
+    ) {
+        lastManualBackupExportDate = date
+
+        userDefaults.set(
+            date.timeIntervalSince1970,
+            forKey: lastManualBackupExportTimestampKey
+        )
+
+        statusMessage = "Backup export completed."
+    }
+
+    func needsManualBackupExportReminder(
+        on date: Date = Date()
+    ) -> Bool {
+        guard let lastManualBackupExportDate else {
+            return true
+        }
+
+        let sevenDays: TimeInterval =
+            7 * 24 * 60 * 60
+
+        return date.timeIntervalSince(
+            lastManualBackupExportDate
+        ) >= sevenDays
     }
     
     func setStatusMessage(

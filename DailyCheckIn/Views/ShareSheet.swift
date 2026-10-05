@@ -10,14 +10,32 @@ import UIKit
 
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
+    let onCompletion: ((Bool) -> Void)?
+
+    init(
+        items: [Any],
+        onCompletion: ((Bool) -> Void)? = nil
+    ) {
+        self.items = items
+        self.onCompletion = onCompletion
+    }
 
     func makeUIViewController(
         context: Context
     ) -> UIActivityViewController {
-        UIActivityViewController(
-            activityItems: items,
-            applicationActivities: nil
-        )
+        let activityViewController =
+            UIActivityViewController(
+                activityItems: items,
+                applicationActivities: nil
+            )
+
+        activityViewController.completionWithItemsHandler = {
+            _, completed, _, _ in
+
+            onCompletion?(completed)
+        }
+
+        return activityViewController
     }
 
     func updateUIViewController(

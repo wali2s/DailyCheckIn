@@ -550,33 +550,63 @@ struct CheckInView: View {
         }
     }
     
-    private var reflectionStep: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.section) {
-            stepHeader(
-                title: "How do you feel in detail?",
-                subtitle: "Use the sliders for a quick check-in or write a short note.",
-                systemImage: "slider.horizontal.3"
-            )
-            
-            Picker("Input Method", selection: $viewModel.reflectionType) {
-                ForEach(ReflectionInputType.allCases) { type in
-                    Text(type.rawValue).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.vertical, 4)
+    private var reflectionTitle: String {
+        switch viewModel.space {
+        case .personal:
+            return "How are you feeling?"
 
-            if viewModel.reflectionType == .sliders {
-                reflectionPromptCard
-                sentimentSlidersCard
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            } else {
-                reflectionPromptCard
-                thoughtsCard
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
+        case .professional:
+            return "How was your workday?"
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.reflectionType)
+    }
+
+    private var reflectionSubtitle: String {
+        switch viewModel.space {
+        case .personal:
+            return "Take a short moment to notice what is going on for you."
+
+        case .professional:
+            return "Reflect on your focus, energy, and workday."
+        }
+    }
+
+    private var reflectionSystemImage: String {
+        switch viewModel.space {
+        case .personal:
+            return "heart.text.square.fill"
+
+        case .professional:
+            return "briefcase.fill"
+        }
+    }
+
+    private var notePlaceholder: String {
+        switch viewModel.space {
+        case .personal:
+            return "Add a short note about your day (optional)"
+
+        case .professional:
+            return "Add a short note about your workday (optional)"
+        }
+    }
+    
+    private var reflectionStep: some View {
+        VStack(
+            alignment: .leading,
+            spacing: AppSpacing.section
+        ) {
+            stepHeader(
+                title: reflectionTitle,
+                subtitle: reflectionSubtitle,
+                systemImage: reflectionSystemImage
+            )
+
+            reflectionPromptCard
+
+            sentimentSlidersCard
+
+            thoughtsCard
+        }
     }
 
     private var sentimentSlidersCard: some View {
@@ -654,7 +684,7 @@ struct CheckInView: View {
                 .font(.headline)
                 .foregroundStyle(AppColors.textPrimary)
             
-            TextField("What's on your mind? (optional)", text: $viewModel.note, axis: .vertical)
+            TextField(notePlaceholder, text: $viewModel.note, axis: .vertical)
                 .font(.body)
                 .textFieldStyle(.plain)
                 .lineLimit(3...6)
@@ -671,24 +701,48 @@ struct CheckInView: View {
     }
     
     private var reflectionPrompt: String {
-        switch viewModel.mood {
-        case .calm:
-            return "What helped you feel calm today?"
+        switch viewModel.space {
+        case .personal:
+            switch viewModel.mood {
+            case .calm:
+                return "What helped you feel calm today?"
 
-        case .good:
-            return "What went well for you today?"
+            case .good:
+                return "What went well for you today?"
 
-        case .happy:
-            return "What made you happiest today?"
+            case .happy:
+                return "What made you happiest today?"
 
-        case .neutral:
-            return "What stood out about your day?"
+            case .neutral:
+                return "What stood out about your day?"
 
-        case .sad:
-            return "What do you need most right now?"
+            case .sad:
+                return "What do you need most right now?"
 
-        case .angry:
-            return "What would help you release some tension?"
+            case .angry:
+                return "What would help you release some tension?"
+            }
+
+        case .professional:
+            switch viewModel.mood {
+            case .calm:
+                return "What helped work feel calm today?"
+
+            case .good:
+                return "What went well at work today?"
+
+            case .happy:
+                return "What made you feel good about your work today?"
+
+            case .neutral:
+                return "What stood out in your workday?"
+
+            case .sad:
+                return "What made work feel difficult today?"
+
+            case .angry:
+                return "What created tension at work today?"
+            }
         }
     }
     

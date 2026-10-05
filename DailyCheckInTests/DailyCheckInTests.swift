@@ -1647,6 +1647,64 @@ struct DailyCheckInTests {
         #expect(program.isRewardReady == true)
     }
     
+    @Test
+    func settingsViewModelRemindsAboutManualExportAfterSevenDays() {
+        let suiteName =
+            "DailyCheckIn.ManualBackupExportReminderTests"
+
+        let testDefaults = UserDefaults(
+            suiteName: suiteName
+        )!
+
+        testDefaults.removePersistentDomain(
+            forName: suiteName
+        )
+
+        defer {
+            testDefaults.removePersistentDomain(
+                forName: suiteName
+            )
+        }
+
+        let viewModel = SettingsViewModel(
+            userDefaults: testDefaults
+        )
+
+        let exportDate = Date(
+            timeIntervalSince1970: 1_700_000_000
+        )
+
+        #expect(
+            viewModel.needsManualBackupExportReminder(
+                on: exportDate
+            )
+        )
+
+        viewModel.markManualBackupExportCompleted(
+            on: exportDate
+        )
+
+        let sixDaysLater = exportDate.addingTimeInterval(
+            6 * 24 * 60 * 60
+        )
+
+        #expect(
+            !viewModel.needsManualBackupExportReminder(
+                on: sixDaysLater
+            )
+        )
+
+        let sevenDaysLater = exportDate.addingTimeInterval(
+            7 * 24 * 60 * 60
+        )
+
+        #expect(
+            viewModel.needsManualBackupExportReminder(
+                on: sevenDaysLater
+            )
+        )
+    }
+    
 }
 
 private final class InMemoryCheckInStorageService: CheckInStorageService {
